@@ -46,7 +46,7 @@ export default function OfficerDashboard() {
               <tr key={q.case_id} className="border-t border-edge">
                 <td className="py-2 font-mono text-xs">{q.case_id}</td>
                 <td>{q.title}</td>
-                <td><span className="px-2 py-0.5 rounded text-xs bg-critical/20 text-critical">{q.risk_tier}</span></td>
+                <td><span className="px-2 py-0.5 rounded text-xs bg-critical/20 text-critical">{q.risk_tier}</span>{q.status === 'NEW_CITIZEN_REPORT' && <span className="ml-2 px-2 py-0.5 rounded text-xs bg-emerald-900 text-emerald-300 animate-pulse">NEW CITIZEN SUBMISSION • AI PRE-TRIAGED</span>}</td>
                 <td>₹{(q.total_inr/100000).toFixed(1)}L</td>
                 <td><button onClick={() => router.push(`/officer/investigate/${q.case_id}`)} className="text-cyan underline text-xs">Launch Investigation</button></td>
               </tr>

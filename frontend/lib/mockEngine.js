@@ -79,14 +79,14 @@ export async function mockHandle(path, options = {}) {
   if (path === '/health') return { status: 'ok', postgres: { status: 'simulated' }, neo4j: { status: 'simulated' }, rpc_adapter: 'fallback_simulator' }
 
   if (path === '/api/v1/dashboard/summary') {
-    const cases = getCases()
+    const cases = getCases().slice().sort((a,b) => (a.complainant?0:1) - (b.complainant?0:1))
     return {
       active_investigations: cases.length,
       total_traced_inr: cases.reduce((a,c)=>a+(c.total_inr||0),0),
       total_traced_usdt: cases.reduce((a,c)=>a+(c.total_usdt||0),0),
       flagged_mule_clusters: 2,
       median_triage_time_hours: 4.2,
-      bridge_queue: cases.map(c => ({ case_id: c.case_id, title: c.title, risk_tier: 'CRITICAL', total_inr: c.total_inr })),
+      bridge_queue: cases.map(c => ({ case_id: c.case_id, title: c.title, risk_tier: 'CRITICAL', total_inr: c.total_inr, status: c.status || 'SEEDED' })),
     }
   }
 
@@ -134,7 +134,19 @@ export async function mockHandle(path, options = {}) {
       nodes.push({ id: 'VASP', type: 'VASPExchange', label: body.exchange, risk_score: 60, risk_tier: 'HIGH', amount_usdt: (body.amount_inr||0)/90, timestamp: body.incident_time, metadata: {} })
       edges.push({ id: 'e_w_vasp', source: 'SUSPECT_WALLET', target: 'VASP', type: 'Exchange', amount: (body.amount_inr||0)/90, asset: 'USDT', timestamp: body.incident_time, evidence_type: 'inferred' })
     }
-    const c = { case_id: caseId, title: `Citizen Complaint - ${body.scam_type}`, description: body.narrative, complainant: { name: body.complainant_name }, scam_type: body.scam_type, incident_time: body.incident_time, amount_inr: body.amount_inr, utrs: body.utrs || [], status: 'NEW_CITIZEN_REPORT', nodes, edges, total_inr: body.amount_inr || 0, total_usdt: (body.amount_inr||0)/90 }
+    for (const content of (body.evidence_contents || [])) {
+      try {
+        const lines2 = content.split(/\r?\n/).filter(Boolean)
+        for (let i=1;i<lines2.length;i++){
+          const cols = lines2[i].split(',')
+          const src = cols[0]; const tgt = cols[2]; const amt = parseFloat(cols[4]||0); const asset = cols[5]||'INR'; const ts = cols[6]||''
+          if (src && !nodes.find(n=>n.id===src)) nodes.push({id:src,type:'BankAccount',label:src,risk_score:60,risk_tier:'HIGH',amount_inr:amt,timestamp:ts,metadata:{}})
+          if (tgt && !nodes.find(n=>n.id===tgt)) nodes.push({id:tgt,type: tgt.includes('COINDCX')?'VASPExchange':'CryptoWallet',label:tgt,risk_score:70,risk_tier:'HIGH',amount_inr:null,amount_usdt:amt,timestamp:ts,metadata:{}})
+          edges.push({id:`ev_${edges.length}`,source:src,target:tgt,type:asset,amount:amt,asset,timestamp:ts,evidence_type:'confirmed'})
+        }
+      } catch {}
+    }
+    const c = { case_id: caseId, title: `Citizen Complaint - ${body.scam_type}`, description: body.narrative, complainant: { name: body.complainant_name }, scam_type: body.scam_type, incident_time: body.incident_time, amount_inr: body.amount_inr, utrs: body.utrs || [], status: 'NEW_CITIZEN_REPORT', nodes, edges, total_inr: body.amount_inr || 0, total_usdt: (body.amount_inr||0)/90, triage_summary: `Q-Sahayak triage: ${body.victim_bank}, amount ${body.amount_inr}, UTRs ${(body.utrs||[]).join(', ')}.` }
     const cases = getCases(); cases.push(c); setCases(cases)
     addAudit(caseId, 'CASE_SUBMITTED', `${body.scam_type} amount ${body.amount_inr}`)
     return { case_id: caseId, status: 'registered' }

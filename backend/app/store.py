@@ -104,10 +104,31 @@ def load_cases():
 conn = get_conn()
 if conn.execute("SELECT COUNT(*) FROM cases").fetchone()[0] == 0:
     conn.close()
+
+
+    nodes_101 = [
+        {"id": "HDFC_VICTIM_ARJUN", "type": "BankAccount", "label": "HDFC Victim (Arjun)", "risk_score": 10, "risk_tier": "LOW", "amount_inr": 285000, "timestamp": _ts(0), "metadata": {"bank": "HDFC Bank"}},
+        {"id": "UPI_MULE_DESK99", "type": "UPI", "label": "desk.settlement99@okicici", "risk_score": 80, "risk_tier": "HIGH", "amount_inr": 150000, "timestamp": _ts(10), "metadata": {}},
+        {"id": "UPI_MULE_PAYTM81", "type": "UPI", "label": "UPI_MULE_PAYTM81@paytm", "risk_score": 78, "risk_tier": "HIGH", "amount_inr": 135000, "timestamp": _ts(12), "metadata": {}},
+        {"id": "COINDCX_NODAL_ESCROW", "type": "VASPExchange", "label": "CoinDCX Nodal Escrow", "risk_score": 70, "risk_tier": "HIGH", "amount_usdt": 3166, "timestamp": _ts(18), "metadata": {}},
+        {"id": "TRON_WALLET_101", "type": "CryptoWallet", "label": "TRON Wallet", "risk_score": 85, "risk_tier": "CRITICAL", "amount_usdt": 3166, "timestamp": _ts(21), "metadata": {}},
+    ]
+    edges_101 = [
+        {"id": "h1", "source": "HDFC_VICTIM_ARJUN", "target": "UPI_MULE_DESK99", "type": "UPI", "amount": 150000, "asset": "INR", "timestamp": _ts(10), "evidence_type": "confirmed"},
+        {"id": "h2", "source": "HDFC_VICTIM_ARJUN", "target": "UPI_MULE_PAYTM81", "type": "UPI", "amount": 135000, "asset": "INR", "timestamp": _ts(12), "evidence_type": "confirmed"},
+        {"id": "h3", "source": "UPI_MULE_DESK99", "target": "COINDCX_NODAL_ESCROW", "type": "Exchange", "amount": 150000, "asset": "INR", "timestamp": _ts(18), "evidence_type": "confirmed"},
+        {"id": "h4", "source": "UPI_MULE_PAYTM81", "target": "COINDCX_NODAL_ESCROW", "type": "Exchange", "amount": 135000, "asset": "INR", "timestamp": _ts(18), "evidence_type": "confirmed"},
+        {"id": "h5", "source": "COINDCX_NODAL_ESCROW", "target": "TRON_WALLET_101", "type": "Crypto", "amount": 3166, "asset": "USDT", "timestamp": _ts(21), "evidence_type": "inferred"},
+    ]
+    for n in nodes_101:
+        enrich_node(n)
+    c101 = {"case_id": "CYB-2026-101", "title": "HDFC-to-CoinDCX Rs 2.85L Urgent Citizen Packet", "description": "Arjun Sharma citizen complaint", "complainant": {"name": "Arjun Sharma", "email": "victim.demo@citizen.in"}, "scam_type": "Pig-Butchering", "amount_inr": 285000, "status": "NEW_CITIZEN_REPORT", "nodes": nodes_101, "edges": edges_101, "total_inr": 285000, "total_usdt": 3166, "triage_summary": "Q-Sahayak triage: HDFC bank, amount 285000, UTRs 432918475612, 432918475988. Downstream platforms: HDFC Bank, ICICI/Paytm Mule Nodal Desk, CoinDCX FIU-IND Compliance Desk."}
+
     c1 = {"case_id": "CYB-2026-089", "title": "UPI-to-USDT Mule Syndicate", "description": "Rs 1.42 Cr mule network", "nodes": nodes_089, "edges": edges_089, "total_inr": 14200000, "total_usdt": 157000}
     c2 = {"case_id": "CYB-2026-094", "title": "Cross-Border Peel Chain", "description": "Pig-butchering peel chain", "nodes": nodes_094, "edges": edges_094, "total_inr": 8500000, "total_usdt": 94000}
     save_case(c1)
     save_case(c2)
+    save_case(c101)
 else:
     conn.close()
 

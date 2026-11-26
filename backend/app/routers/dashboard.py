@@ -5,9 +5,12 @@ router = APIRouter(prefix="/api/v1", tags=["dashboard"])
 
 @router.get("/dashboard/summary")
 def summary():
+    cases = list(CASES.values())
+    # citizen submissions first
+    cases_sorted = sorted(cases, key=lambda c: 0 if c.get("complainant") else 1)
     bridge_queue = []
-    for cid, c in CASES.items():
-        bridge_queue.append({"case_id": cid, "title": c["title"], "risk_tier": "CRITICAL", "total_inr": c["total_inr"]})
+    for c in cases_sorted:
+        bridge_queue.append({"case_id": c["case_id"], "title": c["title"], "risk_tier": "CRITICAL", "total_inr": c["total_inr"], "status": c.get("status", "SEEDED")})
     return {
         "active_investigations": len(CASES),
         "total_traced_inr": sum(c["total_inr"] for c in CASES.values()),

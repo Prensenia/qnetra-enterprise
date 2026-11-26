@@ -113,6 +113,7 @@ class CitizenCaseRequest(BaseModel):
     amount_inr: float
     utrs: List[str] = []
     evidence_hashes: List[str] = []
+    evidence_contents: List[str] = []
     ncrp_id: Optional[str] = ""
 @router.post("/cases")
 def create_citizen_case(req: CitizenCaseRequest):
@@ -147,6 +148,26 @@ def create_citizen_case(req: CitizenCaseRequest):
         "total_inr": req.amount_inr or 0,
         "total_usdt": (req.amount_inr or 0)/90,
     }
+    # parse attached CSVs into graph
+    import io, pandas as pd
+    for content in (req.evidence_contents or []):
+        try:
+            df = pd.read_csv(io.StringIO(content))
+            for _, r in df.iterrows():
+                src = str(r.get("source_id", r.get("source", "")))
+                tgt = str(r.get("target_id", r.get("target", "")))
+                amt = float(r.get("amount", 0))
+                asset = str(r.get("asset", "INR"))
+                ts = str(r.get("timestamp", ""))
+                if src and not any(n["id"] == src for n in case["nodes"]):
+                    case["nodes"].append({"id": src, "type": "BankAccount", "label": src, "risk_score": 60, "risk_tier": "HIGH", "amount_inr": amt if asset == "INR" else None, "amount_usdt": amt if asset != "INR" else None, "timestamp": ts, "metadata": {}})
+                if tgt and not any(n["id"] == tgt for n in case["nodes"]):
+                    case["nodes"].append({"id": tgt, "type": "VASPExchange" if "COINDCX" in tgt.upper() else "CryptoWallet", "label": tgt, "risk_score": 70, "risk_tier": "HIGH", "amount_inr": None, "amount_usdt": amt if asset != "INR" else None, "timestamp": ts, "metadata": {}})
+                case["edges"].append({"id": f"ev_{len(case['edges'])}", "source": src, "target": tgt, "type": asset, "amount": amt, "asset": asset, "timestamp": ts, "evidence_type": "confirmed"})
+        except Exception:
+            pass
+    # zero-touch triage summary
+    case["triage_summary"] = f"Q-Sahayak triage: {req.victim_bank}, amount {req.amount_inr}, UTRs {req.utrs}. Downstream platforms: {req.victim_bank}, ICICI/Paytm Mule Nodal Desk, {req.exchange or 'VASP'}."
     save_case(case)
     add_audit(case_id, req.email, "Citizen", "CASE_SUBMITTED", f"{req.scam_type} amount {req.amount_inr}")
     return {"case_id": case_id, "status": "registered"}

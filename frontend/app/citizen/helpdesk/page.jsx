@@ -107,7 +107,8 @@ export default function CitizenHelpdesk() {
 
   async function submit() {
     try {
-      const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: email || 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: files.map(f=>f.name) }
+      const contents = await Promise.all(files.map(f => f.text()))
+      const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: email || 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: files.map(f=>f.name), evidence_contents: contents }
       const res = await api('/api/v1/citizen/cases', { method: 'POST', body: JSON.stringify(payload) })
       toast.success('Case registered')
       router.push(`/citizen/case-submitted/${res.case_id}`)
