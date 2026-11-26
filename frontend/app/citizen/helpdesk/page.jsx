@@ -23,12 +23,15 @@ const DEMO_FORM = {
 
 export default function CitizenHelpdesk() {
   const router = useRouter()
-  const email = typeof window !== 'undefined' ? localStorage.getItem('qnetra_user_email') : ''
+  const email = typeof window !== 'undefined' ? (localStorage.getItem('qnetra_user_email') || '') : ''
   const isDemo = email === 'victim.demo@citizen.in'
+  const storageKey = `qnetra_citizen_draft_${email}`
+
   const [step, setStep] = useState(1)
   const [lang, setLang] = useState('en')
   const [form, setForm] = useState({ scam_type: 'UPI / QR Fraud', incident_time: '', narrative: '', victim_bank: '', victim_upi: '', suspect_upi: '', suspect_wallet: '', exchange: '', amount_inr: '', utrs: [''], time_approx: '' })
   const [files, setFiles] = useState([])
+  const [messages, setMessages] = useState([])
   const [smsText, setSmsText] = useState('')
   const [ncrpId, setNcrpId] = useState('')
   const [dragOver, setDragOver] = useState(false)
@@ -37,24 +40,50 @@ export default function CitizenHelpdesk() {
   const [citySel, setCitySel] = useState('')
   const bankInfo = lookupBank(form.victim_bank)
 
+  // restore
   useEffect(() => {
+    const raw = sessionStorage.getItem(storageKey)
+    if (raw) {
+      try {
+        const d = JSON.parse(raw)
+        if (d.step) setStep(d.step)
+        if (d.form) setForm(d.form)
+        if (d.messages) setMessages(d.messages)
+        if (d.files) setFiles(d.files)
+        if (d.lang) setLang(d.lang)
+        if (d.ncrpId) setNcrpId(d.ncrpId)
+        return
+      } catch {}
+    }
     if (isDemo) {
       setForm({ ...DEMO_FORM })
       setNcrpId('20811260048912')
-    } else {
-      setForm({ scam_type: 'UPI / QR Fraud', incident_time: '', narrative: '', victim_bank: '', victim_upi: '', suspect_upi: '', suspect_wallet: '', exchange: '', amount_inr: '', utrs: [''], time_approx: '' })
-      setNcrpId('')
+      setMessages([
+        { role: 'assistant', text: 'Namaste! I am Q-Sahayak. Take a deep breath—you are safe, and acting right now within the Golden Hour gives us the strongest chance to freeze your money.' },
+        { role: 'user', text: 'Muje bahut dar lag raha hai, maine 20 minute pehle galti se ₹2,85,000 transfer kar diye fake crypto link pe, ghar pe kya bolunga' },
+        { role: 'assistant', text: 'Bilkul ghabraiye mat. Aap akela nahi hain, aur 20 minute ke andar report karne par RBI Zero-Liability aur 1930 CFCFRMS lien hold ka sabse zyada chance hota hai. Pehle aapki bank ka naam batayein taaki main turant block number de sakun.' },
+        { role: 'user', text: 'HDFC Bank se Google Pay kiya tha, mere paas bank statement CSV bhi hai' },
+        { role: 'assistant', text: 'Bahut badhiya! Maine HDFC Bank ka 24x7 Fraud Block Desk (1800-1600 / 1800-2600) neeche khol diya hai. Aap apna bank statement attach karke Submit dabayein—main aapki 1930 call script aur Cyber Cell packet turant taiyaar kar raha hoon.' },
+      ])
     }
-  }, [isDemo])
+  }, [email])
+
+  // persist
+  useEffect(() => {
+    const draft = { step, form, messages, files, lang, ncrpId }
+    sessionStorage.setItem(storageKey, JSON.stringify(draft))
+  }, [step, form, messages, files, lang, ncrpId, storageKey])
 
   function resetForm() {
     setForm({ scam_type: 'UPI / QR Fraud', incident_time: '', narrative: '', victim_bank: '', victim_upi: '', suspect_upi: '', suspect_wallet: '', exchange: '', amount_inr: '', utrs: [''], time_approx: '' })
     setNcrpId('')
     setFiles([])
+    setMessages([])
+    sessionStorage.removeItem(storageKey)
   }
 
   function loadDemo() {
-    setForm({ ...DEMO_FORM })
+    setForm({ scam_type: 'Pig-Butchering / Fake Crypto Investment', incident_time: '', narrative: 'Received WhatsApp link to a fake institutional USDT trading desk. Transferred ₹2,85,000 via HDFC UPI before realizing withdrawals were blocked and funds moved to CoinDCX.', victim_bank: 'HDFC Bank', victim_upi: 'arjun.sharma@okhdfcbank', suspect_upi: 'desk.settlement99@okicici', suspect_wallet: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE', exchange: 'CoinDCX (FIU-IND Registered)', amount_inr: '285000', utrs: ['432918475612'], time_approx: '' })
     setNcrpId('20811260048912')
   }
 
@@ -102,15 +131,16 @@ export default function CitizenHelpdesk() {
   }
 
   function handleFiles(fs) {
-    setFiles(prev => [...prev, ...fs])
+    const mapped = fs.map(f => ({ name: f.name, size: f.size, type: f.type }))
+    setFiles(prev => [...prev, ...mapped])
   }
 
   async function submit() {
     try {
-      const contents = await Promise.all(files.map(f => f.text()))
-      const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: email || 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: files.map(f=>f.name), evidence_contents: contents }
+      const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: email || 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: files.map(f=>f.name) }
       const res = await api('/api/v1/citizen/cases', { method: 'POST', body: JSON.stringify(payload) })
       toast.success('Case registered')
+      sessionStorage.removeItem(storageKey)
       router.push(`/citizen/case-submitted/${res.case_id}`)
     } catch { toast.error('Submission failed') }
   }
@@ -176,7 +206,7 @@ export default function CitizenHelpdesk() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-5 min-w-0">
-          <QSahayakBot form={form} setForm={setForm} lang={lang} setLang={setLang} demoMode={isDemo} />
+          <QSahayakBot form={form} setForm={setForm} lang={lang} setLang={setLang} demoMode={isDemo} initialMessages={messages} onMessagesChange={setMessages} />
         </div>
         <div className="lg:col-span-7 min-w-0 bg-slate-800 border border-slate-700 rounded-xl p-4">
           <h2 className="text-lg font-bold text-emerald-400 mb-3">{t(lang,'title')} — {step===1 ? t(lang,'step1') : step===2 ? t(lang,'step2') : t(lang,'step3')}</h2>

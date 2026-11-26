@@ -22,7 +22,7 @@ function fallbackReply(msg, form, lang, history = []) {
   return { reply, extracted_fields: {}, quick_replies: ['I don\'t know the UTR', 'I don\'t have the suspect ID', 'I already called 1930', 'Help me fill the form'], emotion_state: 'calming' }
 }
 
-export default function QSahayakBot({ form, setForm, lang, setLang, demoMode }) {
+export default function QSahayakBot({ form, setForm, lang, setLang, demoMode, initialMessages, onMessagesChange }) {
   useEffect(() => {
     if (demoMode) {
       setChat([
@@ -31,7 +31,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode }) 
       ])
     }
   }, [demoMode])
-  const [chat, setChat] = useState([{ role: 'assistant', text: 'Namaste! I am Q-Sahayak. Take a deep breath.' }])
+  const [chat, setChat] = useState(initialMessages && initialMessages.length ? initialMessages : [{ role: 'assistant', text: 'Namaste! I am Q-Sahayak. Take a deep breath.' }])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [listening, setListening] = useState(false)
@@ -43,6 +43,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode }) 
   const [files, setFiles] = useState([])
   const recRef = useRef(null)
   const bottomRef = useRef(null)
+  useEffect(() => { if (onMessagesChange) onMessagesChange(chat) }, [chat, onMessagesChange])
   const fileRef = useRef(null)
 
   const speechLang = (lang === 'hi' ? 'hi-IN' : lang === 'pa' ? 'pa-IN' : lang === 'ta' ? 'ta-IN' : lang === 'te' ? 'te-IN' : lang === 'bn' ? 'bn-IN' : 'en-IN')
