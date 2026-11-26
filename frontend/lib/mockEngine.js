@@ -157,8 +157,27 @@ export async function mockHandle(path, options = {}) {
 
   const m = path.match(/^\/api\/v1\/cases\/([^/]+)\/graph$/)
   if (m && method === 'GET') {
-    const c = findCase(m[1]); if (!c) throw new Error('not found')
-    return { case_id: m[1], nodes: c.nodes, edges: c.edges }
+    const c = findCase(m[1])
+    if (c && c.nodes && c.nodes.length) return { case_id: m[1], nodes: c.nodes, edges: c.edges, case_info: {}, evidence_files: [], audit_logs: [], pretriage_notices: [] }
+    const nodes = [
+      { id: 'VICTIM', type: 'BankAccount', label: 'Victim Account', risk_score: 10, risk_tier: 'LOW', amount_inr: 285000, timestamp: '2026-11-26T22:10:00+05:30', metadata: { bank: 'HDFC Bank' } },
+      { id: 'UPI_MULE_1', type: 'UPI', label: 'desk.settlement99@okicici', risk_score: 80, risk_tier: 'HIGH', amount_inr: 150000, timestamp: '2026-11-26T22:10:00+05:30', metadata: {} },
+      { id: 'UPI_MULE_2', type: 'UPI', label: 'UPI_MULE_PAYTM81@paytm', risk_score: 78, risk_tier: 'HIGH', amount_inr: 135000, timestamp: '2026-11-26T22:12:00+05:30', metadata: {} },
+      { id: 'VASP', type: 'VASPExchange', label: 'CoinDCX Nodal Escrow', risk_score: 70, risk_tier: 'HIGH', amount_usdt: 3166, timestamp: '2026-11-26T22:18:00+05:30', metadata: { exchange: 'CoinDCX (FIU-IND Registered)' } },
+      { id: 'WALLET', type: 'CryptoWallet', label: 'TRON Wallet', risk_score: 85, risk_tier: 'CRITICAL', amount_usdt: 3166, timestamp: '2026-11-26T22:21:00+05:30', metadata: { network: 'TRON TRC-20' } },
+      { id: 'MIXER', type: 'Mixer', label: 'Mixer Cluster', risk_score: 90, risk_tier: 'CRITICAL', amount_usdt: 2000, timestamp: '2026-11-26T22:25:00+05:30', metadata: {} },
+      { id: 'OFFSHORE', type: 'SanctionedCluster', label: 'Binance Hot Wallet #14', risk_score: 99, risk_tier: 'CRITICAL', amount_usdt: 1000, timestamp: '2026-11-26T22:30:00+05:30', metadata: {} },
+    ]
+    const edges = [
+      { id: 'e1', source: 'VICTIM', target: 'UPI_MULE_1', type: 'UPI', amount: 150000, asset: 'INR', timestamp: '2026-11-26T22:10:00+05:30', evidence_type: 'confirmed' },
+      { id: 'e2', source: 'VICTIM', target: 'UPI_MULE_2', type: 'UPI', amount: 135000, asset: 'INR', timestamp: '2026-11-26T22:12:00+05:30', evidence_type: 'confirmed' },
+      { id: 'e3', source: 'UPI_MULE_1', target: 'VASP', type: 'Exchange', amount: 150000, asset: 'INR', timestamp: '2026-11-26T22:18:00+05:30', evidence_type: 'confirmed' },
+      { id: 'e4', source: 'UPI_MULE_2', target: 'VASP', type: 'Exchange', amount: 135000, asset: 'INR', timestamp: '2026-11-26T22:18:00+05:30', evidence_type: 'confirmed' },
+      { id: 'e5', source: 'VASP', target: 'WALLET', type: 'Crypto', amount: 3166, asset: 'USDT', timestamp: '2026-11-26T22:21:00+05:30', evidence_type: 'inferred' },
+      { id: 'e6', source: 'WALLET', target: 'MIXER', type: 'Crypto', amount: 2000, asset: 'USDT', timestamp: '2026-11-26T22:25:00+05:30', evidence_type: 'inferred' },
+      { id: 'e7', source: 'MIXER', target: 'OFFSHORE', type: 'Crypto', amount: 1000, asset: 'USDT', timestamp: '2026-11-26T22:30:00+05:30', evidence_type: 'inferred' },
+    ]
+    return { case_id: m[1], nodes, edges, case_info: {}, evidence_files: [], audit_logs: [], pretriage_notices: [] }
   }
   const ma = path.match(/^\/api\/v1\/cases\/([^/]+)\/audit$/)
   if (ma && method === 'GET') {
@@ -188,7 +207,18 @@ export async function mockHandle(path, options = {}) {
     return { pdf_base64: b64, filename: `${mpdf[1]}_dossier.pdf` }
   }
   if (path === '/api/v1/vasp/directory' || path === '/api/v1/vasps') {
-    return { vasps: [{ name: 'CoinDCX', fiu_registered: true, lea_email: 'lea@coindcx.com', freeze_sla: '<4hrs', kyc: 'PAN+Aadhaar' }], banks: [] }
+    return { vasps: [
+      { name: 'CoinDCX', fiu_registered: true, lea_email: 'lea@coindcx.com', freeze_sla: '<4hrs', kyc: 'PAN+Aadhaar' },
+      { name: 'Mudrex', fiu_registered: true, lea_email: 'compliance@mudrex.com', freeze_sla: '<6hrs', kyc: 'PAN+Aadhaar' },
+      { name: 'ZebPay', fiu_registered: true, lea_email: 'legal@zebpay.com', freeze_sla: '<5hrs', kyc: 'PAN+Aadhaar+Video' },
+      { name: 'CoinSwitch', fiu_registered: true, lea_email: 'compliance@coinswitch.co', freeze_sla: '<5hrs', kyc: 'PAN+Aadhaar' },
+      { name: 'Binance', fiu_registered: false, lea_email: 'lawenforcement@binance.com', freeze_sla: 'Non-Cooperative', kyc: 'Email Only' },
+      { name: 'KuCoin', fiu_registered: false, lea_email: 'lea@kucoin.com', freeze_sla: 'Non-Cooperative', kyc: 'Minimal' },
+      { name: 'Bybit', fiu_registered: false, lea_email: 'legal@bybit.com', freeze_sla: 'Non-Cooperative', kyc: 'Phone Only' },
+      { name: 'SBI', fiu_registered: true, lea_email: 'nodal@sbi.co.in', freeze_sla: '<2hrs', kyc: 'PAN+Aadhaar' },
+      { name: 'HDFC Bank', fiu_registered: true, lea_email: 'nodal@hdfcbank.com', freeze_sla: '<2hrs', kyc: 'PAN+Aadhaar' },
+      { name: 'ICICI Bank', fiu_registered: true, lea_email: 'nodal@icicibank.com', freeze_sla: '<2hrs', kyc: 'PAN+Aadhaar' },
+    ], banks: [] }
   }
   if (path === '/api/v1/settings/api-keys' && method === 'GET') return getKeys()
   if (path === '/api/v1/settings/api-keys' && method === 'POST') {
