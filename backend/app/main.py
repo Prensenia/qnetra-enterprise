@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, ingest, onchain, analyze, dashboard, cases, settings, health, vasp
+from .routers import auth, ingest, onchain, analyze, dashboard, cases, settings, health, vasp, citizen, officer
 
 app = FastAPI(title="Q-Netra Enterprise Suite", version="1.0.0")
 
@@ -21,6 +21,8 @@ app.include_router(cases.router)
 app.include_router(settings.router)
 app.include_router(health.router)
 app.include_router(vasp.router)
+app.include_router(citizen.router)
+app.include_router(officer.router)
 
 @app.get("/")
 def root():

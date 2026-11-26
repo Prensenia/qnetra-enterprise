@@ -1,13 +1,14 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Search, Key, Building2 } from 'lucide-react'
+import { LayoutDashboard, Search, Key, Building2, Wrench } from 'lucide-react'
 
 const items = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/investigate/CYB-2026-089', label: 'Investigate', icon: Search },
-  { href: '/vasp-directory', label: 'VASP Intel', icon: Building2 },
-  { href: '/settings/api-keys', label: 'API Keys', icon: Key },
+  { href: '/officer/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/officer/investigate/CYB-2026-089', label: 'Investigate', icon: Search },
+  { href: '/officer/vasp-directory', label: 'VASP Intel', icon: Building2 },
+  { href: '/officer/tools', label: 'Tools', icon: Wrench },
+  { href: '/officer/settings/api-keys', label: 'API Keys', icon: Key },
 ]
 
 export default function NavRail() {

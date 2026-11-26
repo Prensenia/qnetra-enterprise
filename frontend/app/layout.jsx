@@ -1,5 +1,6 @@
 import './globals.css'
-import AppShell from '../components/AppShell'
+import RootShell from '../components/RootShell'
+import { Toaster } from 'sonner'
 
 export const metadata = {
   title: 'Q-Netra Enterprise',
@@ -10,7 +11,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="min-h-screen">
-        <AppShell>{children}</AppShell>
+        <RootShell>{children}</RootShell>
+        <Toaster theme="dark" />
       </body>
     </html>
   )
