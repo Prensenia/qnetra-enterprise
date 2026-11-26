@@ -154,7 +154,7 @@ export default function CitizenHelpdesk() {
                 className={`border-2 border-dashed rounded p-6 text-center ${dragOver ? 'border-emerald-500' : 'border-slate-600'}`}
               >
                 Drag & drop evidence here
-                <input type="file" multiple onChange={e=>handleFiles(Array.from(e.target.files))} className="block mt-2" />
+                <label className="mt-2 inline-block px-3 py-1 bg-emerald-600 text-white rounded cursor-pointer">Add File<input type="file" multiple className="hidden" onChange={e=>handleFiles(Array.from(e.target.files))} /></label>
               </div>
               {files.map((f,i) => <div key={i} className="text-xs text-slate-300">{f.name} ({Math.round(f.size/1024)}KB)</div>)}
               <div className="flex gap-2">

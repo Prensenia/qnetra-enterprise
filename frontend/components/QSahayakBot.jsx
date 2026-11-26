@@ -127,7 +127,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
           </select>
           <button onClick={() => setVoiceMode(v => !v)} className="px-2 py-1 text-xs border border-slate-600 rounded">{voiceMode ? <VolumeX size={14}/> : <Volume2 size={14}/>}</button>
           <button onClick={toggleMic} className={`px-2 py-1 text-xs border rounded ${listening ? 'bg-red-600 text-white animate-pulse' : 'border-slate-600'}`}>{listening ? <MicOff size={14}/> : <Mic size={14}/>}</button>
-          <button onClick={() => fileRef.current?.click()} className="px-2 py-1 text-xs border border-slate-600 rounded"><Paperclip size={14}/></button>
+          <button onClick={() => fileRef.current?.click()} className="px-2 py-1 text-xs border border-slate-600 rounded flex items-center gap-1"><Paperclip size={14}/> Add File</button>
           <input ref={fileRef} type="file" multiple className="hidden" onChange={handleFiles} />
         </div>
       </div>
