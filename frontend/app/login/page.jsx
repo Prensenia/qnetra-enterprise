@@ -15,6 +15,7 @@ export default function LoginPage() {
     try {
       const res = await api('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
       setToken(res.access_token)
+      if (typeof window !== 'undefined') localStorage.setItem('qnetra_role', res.role)
       router.push('/dashboard')
     } catch (err) {
       setError('Login failed')

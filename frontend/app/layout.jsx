@@ -1,4 +1,5 @@
 import './globals.css'
+import AppShell from '../components/AppShell'
 
 export const metadata = {
   title: 'Q-Netra Enterprise',
@@ -8,7 +9,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="min-h-screen">{children}</body>
+      <body className="min-h-screen">
+        <AppShell>{children}</AppShell>
+      </body>
     </html>
   )
 }

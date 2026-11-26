@@ -3,9 +3,17 @@
 @tailwind utilities;
 
 body {
-  background-color: #090D16;
+  background-color: #060913;
   color: #e2e8f0;
   font-family: 'Inter', system-ui, sans-serif;
+  background-image: linear-gradient(rgba(6,182,212,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
 .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+.glass {
+  background: rgba(13,19,34,0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid #1E293B;
+}
