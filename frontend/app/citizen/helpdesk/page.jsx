@@ -16,7 +16,38 @@ export default function CitizenHelpdesk() {
   const [smsText, setSmsText] = useState('')
   const [ncrpId, setNcrpId] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [ocrLoading, setOcrLoading] = useState(false)
   const bankInfo = lookupBank(form.victim_bank)
+
+  async function handleOcrFile(file) {
+    if (!file) return
+    setOcrLoading(true)
+    try {
+      const { createWorker } = await import('tesseract.js')
+      const worker = await createWorker('eng')
+      const { data } = await worker.recognize(file)
+      await worker.terminate()
+      setSmsText(data.text || '')
+      // auto parse
+      setTimeout(() => {
+        const t = data.text || ''
+        const amt = t.match(/(?:Rs\.?|INR|₹)\s*([\d,]+)/i)
+        const utr = t.match(/\b\d{12}\b/)
+        const upi = t.match(/[a-zA-Z0-9.\-_]+@[a-zA-Z]+/i)
+        const bankMatch = t.match(/SBI|HDFC|ICICI|Axis|PNB|Kotak|BoB|Canara|Union|IndusInd|Yes|IDFC|Paytm/i)
+        const newForm = { ...form }
+        if (amt) newForm.amount_inr = amt[1].replace(/,/g, '')
+        if (utr) newForm.utrs = [utr[0]]
+        if (upi) newForm.suspect_upi = upi[0]
+        if (bankMatch) newForm.victim_bank = bankMatch[0]
+        setForm(newForm)
+      }, 100)
+    } catch (e) {
+      toast.error('OCR failed')
+    } finally {
+      setOcrLoading(false)
+    }
+  }
 
   function parseSMS() {
     const t = smsText
@@ -75,7 +106,13 @@ export default function CitizenHelpdesk() {
       <details className="bg-slate-800 border border-slate-700 rounded-xl p-4">
         <summary className="cursor-pointer text-sm font-bold text-emerald-400">{t(lang,'smsDrawer')}</summary>
         <textarea value={smsText} onChange={e=>setSmsText(e.target.value)} placeholder="Paste SMS/receipt..." className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm mt-2" rows={3} />
-        <button onClick={parseSMS} className="mt-2 px-3 py-1 bg-emerald-600 text-white rounded text-sm">{t(lang,'autoFill')}</button>
+        <div className="mt-2 flex gap-2 items-center">
+          <button onClick={parseSMS} className="px-3 py-1 bg-emerald-600 text-white rounded text-sm">{t(lang,'autoFill')}</button>
+          <label className="px-3 py-1 bg-slate-700 text-white rounded text-sm cursor-pointer">
+            {ocrLoading ? 'Extracting...' : 'Add File (OCR)'}
+            <input type="file" accept="image/*" className="hidden" onChange={e=>handleOcrFile(e.target.files?.[0])} />
+          </label>
+        </div>
       </details>
 
       {(form.scam_type === 'APK / Remote Access Scam' || smsText.toLowerCase().includes('http') || smsText.toLowerCase().includes('apk')) && (
