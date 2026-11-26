@@ -58,14 +58,11 @@ export async function POST(req) {
           if (r.ok) {
             const data = await r.json()
             const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-            let parsed
-            try {
-              const jsonMatch = raw.match(/\{[\s\S]*\}/)
-              parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(raw)
-            } catch {
-              parsed = { reply: raw, extracted_fields: {}, quick_replies: [], emotion_state: 'guiding' }
-            }
-            return NextResponse.json({ ...parsed, engine_mode: 'gemini-live', model_used: model, debug_reason: '' })
+            const rawClean = raw.replace(/```json|```/gi, '').trim()
+            let parsed = {}
+            try { parsed = JSON.parse(rawClean) } catch { parsed = {} }
+            const replyText = parsed.reply || parsed.response || parsed.message || parsed.answer || rawClean || 'I am here with you. Tell me what happened and which bank or app was involved.'
+            return NextResponse.json({ reply: replyText, extracted_fields: parsed.extracted_fields || {}, quick_replies: parsed.quick_replies || ['I don\'t know the UTR', 'I don\'t have the suspect ID', 'I already called 1930', 'Help me fill the form', 'Tell me a quick joke'], emotion_state: parsed.emotion_state || 'guiding', engine_mode: 'gemini-live', model_used: model, debug_reason: '' })
           } else {
             lastError = `HTTP ${r.status}: ${await r.text()}`
           }

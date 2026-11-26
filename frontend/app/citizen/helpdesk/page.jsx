@@ -16,10 +16,24 @@ export default function CitizenHelpdesk() {
   const [smsText, setSmsText] = useState('')
   const [ncrpId, setNcrpId] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [ocrLoading, setOcrLoading] = useState(false)
   const [stateSel, setStateSel] = useState('')
   const [citySel, setCitySel] = useState('')
-  const [ocrLoading, setOcrLoading] = useState(false)
   const bankInfo = lookupBank(form.victim_bank)
+
+  function parseSMS() {
+    const t = smsText
+    const amt = t.match(/(?:Rs\.?|INR|₹)\s*([\d,]+)/i)
+    const utr = t.match(/\b\d{12}\b/)
+    const upi = t.match(/[a-zA-Z0-9.\-_]+@[a-zA-Z]+/i)
+    const bankMatch = t.match(/SBI|HDFC|ICICI|Axis|PNB|Kotak|BoB|Canara|Union|IndusInd|Yes|IDFC|Paytm/i)
+    const newForm = { ...form }
+    if (amt) newForm.amount_inr = amt[1].replace(/,/g, '')
+    if (utr) newForm.utrs = [utr[0]]
+    if (upi) newForm.suspect_upi = upi[0]
+    if (bankMatch) newForm.victim_bank = bankMatch[0]
+    setForm(newForm)
+  }
 
   async function handleOcrFile(file) {
     if (!file) return
@@ -30,7 +44,6 @@ export default function CitizenHelpdesk() {
       const { data } = await worker.recognize(file)
       await worker.terminate()
       setSmsText(data.text || '')
-      // auto parse
       setTimeout(() => {
         const t = data.text || ''
         const amt = t.match(/(?:Rs\.?|INR|₹)\s*([\d,]+)/i)
@@ -51,20 +64,6 @@ export default function CitizenHelpdesk() {
     }
   }
 
-  function parseSMS() {
-    const t = smsText
-    const amt = t.match(/(?:Rs\.?|INR|₹)\s*([\d,]+)/i)
-    const utr = t.match(/\b\d{12}\b/)
-    const upi = t.match(/[a-zA-Z0-9.\-_]+@[a-zA-Z]+/i)
-    const bankMatch = t.match(/SBI|HDFC|ICICI|Axis|PNB|Kotak|BoB|Canara|Union|IndusInd|Yes|IDFC|Paytm/i)
-    const newForm = { ...form }
-    if (amt) newForm.amount_inr = amt[1].replace(/,/g, '')
-    if (utr) newForm.utrs = [utr[0]]
-    if (upi) newForm.suspect_upi = upi[0]
-    if (bankMatch) newForm.victim_bank = bankMatch[0]
-    setForm(newForm)
-  }
-
   function handleFiles(fs) {
     setFiles(prev => [...prev, ...fs])
   }
@@ -82,9 +81,15 @@ export default function CitizenHelpdesk() {
     setForm({ ...form, [field]: value })
   }
 
+  function setNow() {
+    const now = new Date()
+    const pad = n => String(n).padStart(2,'0')
+    const val = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
+    setForm({ ...form, incident_time: val })
+  }
+
   return (
     <div className="space-y-4">
-      {/* Top emergency strip */}
       <div className="p-3 border border-emerald-700 rounded bg-emerald-950 text-emerald-200 text-sm flex items-center justify-between flex-wrap gap-2">
         <div>{t(lang,'emergency')} — {t(lang,'goldenHour')}</div>
         <div className="flex gap-2">
@@ -95,16 +100,14 @@ export default function CitizenHelpdesk() {
         </div>
       </div>
 
-      {/* Progress bar */}
       <div className="flex gap-2 text-xs">
         {[1,2,3].map(s => (
           <div key={s} className={`flex-1 p-2 rounded text-center ${step===s ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
-            {s===1 ? t(lang,'step1') : s===2 ? t(lang,'step2') : t(lang,'step3')}
+            {s===1 ? t(lang,'step1') : s===2 ? t(lang,'step2') : s===3 ? t(lang,'step3') : ''}
           </div>
         ))}
       </div>
 
-      {/* SMS drawer */}
       <details className="bg-slate-800 border border-slate-700 rounded-xl p-4">
         <summary className="cursor-pointer text-sm font-bold text-emerald-400">{t(lang,'smsDrawer')}</summary>
         <textarea value={smsText} onChange={e=>setSmsText(e.target.value)} placeholder="Paste SMS/receipt..." className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm mt-2" rows={3} />
@@ -140,7 +143,11 @@ export default function CitizenHelpdesk() {
                 <option>Job / Task Scam</option>
               </select>
               <label className="text-xs text-slate-400">{t(lang,'incidentTime')}</label>
-              <input type="datetime-local" value={form.incident_time} onChange={e=>setForm({...form, incident_time: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+              <div className="flex gap-2">
+                <input type="datetime-local" value={form.incident_time} onChange={e=>setForm({...form, incident_time: e.target.value})} className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+                <button onClick={setNow} className="px-3 py-2 bg-slate-700 text-white rounded text-xs">Just Now</button>
+                <button onClick={() => setForm({...form, incident_time: ''})} className="px-3 py-2 bg-slate-700 text-white rounded text-xs">I Don't Know Exact Time</button>
+              </div>
               <label className="text-xs text-slate-400">{t(lang,'narrative')}</label>
               <textarea value={form.narrative} onChange={e=>setForm({...form, narrative: e.target.value})} placeholder={t(lang,'narrative')} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" rows={4} />
               <button onClick={()=>setStep(2)} className="px-3 py-2 bg-emerald-600 text-white rounded">{t(lang,'next')}</button>
@@ -149,54 +156,71 @@ export default function CitizenHelpdesk() {
           {step === 2 && (
             <div className="space-y-3">
               <label className="text-xs text-slate-400">{t(lang,'bank')}</label>
-              <div className="grid grid-cols-3 gap-2">
-                <select value={stateSel} onChange={e=>{setStateSel(e.target.value);setCitySel('')}} className="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs">
-                  <option value="">Select State</option>
-                  <option>Chandigarh</option><option>Delhi</option><option>Maharashtra</option><option>Karnataka</option><option>Tamil Nadu</option><option>Telangana</option><option>West Bengal</option>
-                </select>
-                <select value={citySel} onChange={e=>setCitySel(e.target.value)} className="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs">
-                  <option value="">Select City</option>
-                  {stateSel==='Chandigarh' && <option>Chandigarh</option>}
-                  {stateSel==='Delhi' && <option>New Delhi</option>}
-                  {stateSel==='Maharashtra' && <option>Mumbai</option>}
-                  {stateSel==='Karnataka' && <option>Bengaluru</option>}
-                  {stateSel==='Tamil Nadu' && <option>Chennai</option>}
-                  {stateSel==='Telangana' && <option>Hyderabad</option>}
-                  {stateSel==='West Bengal' && <option>Kolkata</option>}
-                </select>
-                <select onChange={e=>setForm({...form, victim_bank: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs">
-                  <option value="">Select Bank</option>
-                  <option>SBI</option><option>HDFC</option><option>ICICI</option><option>Axis</option><option>PNB</option><option>Kotak</option><option>BoB</option><option>Canara</option><option>Union</option><option>IndusInd</option><option>Yes</option><option>IDFC</option>
-                </select>
-              </div>
-              <input value={form.victim_bank} onChange={e=>setForm({...form, victim_bank: e.target.value})} placeholder={t(lang,'bank')} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+              <select value={form.victim_bank} onChange={e=>setForm({...form, victim_bank: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2">
+                <option value="">Select Bank</option>
+                <option>State Bank of India (SBI)</option>
+                <option>HDFC Bank</option>
+                <option>ICICI Bank</option>
+                <option>Axis Bank</option>
+                <option>Punjab National Bank (PNB)</option>
+                <option>Kotak Mahindra Bank</option>
+                <option>Bank of Baroda</option>
+                <option>Canara Bank</option>
+                <option>Union Bank of India</option>
+                <option>IndusInd Bank</option>
+                <option>Yes Bank</option>
+                <option>IDFC First Bank</option>
+                <option>Paytm Payments Bank</option>
+                <option>Airtel Payments Bank</option>
+                <option>Other Bank</option>
+              </select>
+              <button onClick={() => setForm({...form, victim_bank: 'UNKNOWN'})} className="px-2 py-1 text-xs border border-slate-600 rounded">{t(lang,'dontKnow')}</button>
+
               <label className="text-xs text-slate-400">{t(lang,'victimUpi')}</label>
-              <input value={form.victim_upi} onChange={e=>setForm({...form, victim_upi: e.target.value})} placeholder={t(lang,'victimUpi')} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+              <input value={form.victim_upi} onChange={e=>setForm({...form, victim_upi: e.target.value})} placeholder="e.g., yourname@okicici or mobile@ybl" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+
               <label className="text-xs text-slate-400">{t(lang,'suspectUpi')}</label>
               <div className="flex gap-2">
-                <input value={form.suspect_upi} onChange={e=>setForm({...form, suspect_upi: e.target.value})} placeholder={t(lang,'suspectUpi')} className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+                <input value={form.suspect_upi} onChange={e=>setForm({...form, suspect_upi: e.target.value})} placeholder="e.g., scammer@paytm or 918273645512" className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
                 <button onClick={() => setUnknown('suspect_upi', 'UNKNOWN_SUSPECT_IDENTIFIER')} className="px-2 py-1 text-xs border border-slate-600 rounded">{t(lang,'dontKnow')}</button>
               </div>
+
               <label className="text-xs text-slate-400">{t(lang,'suspectWallet')}</label>
               <div className="flex gap-2">
-                <input value={form.suspect_wallet} onChange={e=>setForm({...form, suspect_wallet: e.target.value})} placeholder={t(lang,'suspectWallet')} className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+                <input value={form.suspect_wallet} onChange={e=>setForm({...form, suspect_wallet: e.target.value})} placeholder="e.g., TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE (TRC-20)" className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
                 <button onClick={() => setUnknown('suspect_wallet', 'UNKNOWN_SUSPECT_IDENTIFIER')} className="px-2 py-1 text-xs border border-slate-600 rounded">{t(lang,'dontKnow')}</button>
               </div>
+
               <label className="text-xs text-slate-400">{t(lang,'exchange')}</label>
               <div className="flex gap-2">
-                <input value={form.exchange} onChange={e=>setForm({...form, exchange: e.target.value})} placeholder={t(lang,'exchange')} className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+                <select value={form.exchange} onChange={e=>setForm({...form, exchange: e.target.value})} className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2">
+                  <option value="">None / Pure UPI-Bank Fraud</option>
+                  <option>CoinDCX (FIU-IND Registered)</option>
+                  <option>Mudrex (FIU-IND Registered)</option>
+                  <option>ZebPay (FIU-IND Registered)</option>
+                  <option>CoinSwitch</option>
+                  <option>Binance Global</option>
+                  <option>KuCoin</option>
+                  <option>Bybit</option>
+                  <option>Telegram / WhatsApp P2P Group</option>
+                  <option>Other Platform</option>
+                </select>
                 <button onClick={() => setUnknown('exchange', 'UNKNOWN_PLATFORM')} className="px-2 py-1 text-xs border border-slate-600 rounded">{t(lang,'dontKnow')}</button>
               </div>
+
               <label className="text-xs text-slate-400">{t(lang,'amount')}</label>
-              <input type="number" value={form.amount_inr} onChange={e=>setForm({...form, amount_inr: e.target.value})} placeholder={t(lang,'amount')} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+              <input type="number" value={form.amount_inr} onChange={e=>setForm({...form, amount_inr: e.target.value})} placeholder="e.g., 45000" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+
               <label className="text-xs text-slate-400">{t(lang,'utr')}</label>
               <div className="flex gap-2">
-                <input value={form.utrs[0]} onChange={e=>setForm({...form, utrs: [e.target.value]})} placeholder={t(lang,'utr')} className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+                <input value={form.utrs[0]} onChange={e=>setForm({...form, utrs: [e.target.value]})} placeholder="e.g., 432918475612 (from bank SMS or UPI receipt)" className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
                 <button onClick={() => setUnknown('utrs', ['UNKNOWN_UTR_BANK_STATEMENT_PENDING'])} className="px-2 py-1 text-xs border border-slate-600 rounded">{t(lang,'dontKnow')}</button>
               </div>
               {form.utrs[0] === 'UNKNOWN_UTR_BANK_STATEMENT_PENDING' && <div className="text-xs text-emerald-300">No problem—your bank statement or SMS will have this, and officers can still trace using your bank account & timestamp.</div>}
+
               <label className="text-xs text-slate-400">{t(lang,'ncrp')}</label>
               <input value={ncrpId} onChange={e=>setNcrpId(e.target.value)} placeholder={t(lang,'ncrp')} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+
               <div className="flex gap-2">
                 <button onClick={()=>setStep(1)} className="px-3 py-2 bg-slate-700 text-white rounded">{t(lang,'back')}</button>
                 <button onClick={()=>setStep(3)} className="px-3 py-2 bg-emerald-600 text-white rounded">{t(lang,'next')}</button>

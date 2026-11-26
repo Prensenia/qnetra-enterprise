@@ -96,7 +96,8 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
       })
       if (!res.ok) throw new Error('fail')
       const data = await res.json()
-      setChat(c => [...c, { role: 'assistant', text: data.reply }])
+      const botReply = data.reply || data.message || data.response || data.answer || "I'm here with you. Tell me what happened and which bank or app was involved."
+      setChat(c => [...c, { role: 'assistant', text: botReply }])
       if (data.extracted_fields) setForm(f => ({ ...f, ...data.extracted_fields }))
       if (data.quick_replies) setQuickReplies(data.quick_replies)
       if (data.engine_mode) setEngineMode(data.engine_mode)
