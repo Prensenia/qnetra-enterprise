@@ -2,6 +2,36 @@ import { NextResponse } from 'next/server'
 
 const SYSTEM_PROMPT = `You are Q-Sahayak, Cybernautics' empathetic Indian Cyber Crisis & Golden-Hour Triage Companion. Be warm, human, reassuring. Support English, Hindi, Hinglish. If user greets, asks a joke, or vents, respond naturally (can tell a clean light one-line joke) before guiding to bank safety, calling 1930, and filling report. Use conversation history and current_form to avoid repeating questions. Always return valid JSON only: {"reply":"...","extracted_fields":{"scam_type":"","bank_name":"","amount_inr":"","utr":"","suspect_id":"","vasp_name":"","narrative":""},"quick_replies":["..."],"emotion_state":"calming|guiding|urgent_action"}.`
 
+async function testGemini(apiKey, models) {
+  let lastError = apiKey ? '' : 'GEMINI_API_KEY is empty in Vercel env'
+  for (const model of models) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'ping' }] }] }),
+      })
+      if (r.ok) return { ok: true, model, error: '' }
+      lastError = `HTTP ${r.status}: ${await r.text()}`
+    } catch (e) {
+      lastError = String(e)
+    }
+  }
+  return { ok: false, model: null, error: lastError || 'API key missing' }
+}
+
+export async function GET() {
+  const apiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim()
+  if (!apiKey) {
+    return NextResponse.json({ has_key: false, engine_mode: 'local-fallback', model_used: null, debug_reason: 'GEMINI_API_KEY is empty in Vercel env' })
+  }
+  const res = await testGemini(apiKey, ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3.6-flash'])
+  if (res.ok) {
+    return NextResponse.json({ has_key: true, engine_mode: 'gemini-live', model_used: res.model, debug_reason: '' })
+  }
+  return NextResponse.json({ has_key: true, engine_mode: 'local-fallback', model_used: null, debug_reason: res.error })
+}
+
 export async function POST(req) {
   try {
     const body = await req.json()
@@ -10,34 +40,32 @@ export async function POST(req) {
     const currentForm = body.current_form || {}
     const language = body.language || 'en-IN'
 
-    const geminiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim()
+    const apiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim()
 
-    // Gemini with late-2026 model fallback
-    if (geminiKey) {
+    if (apiKey) {
       const models = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash']
-      let lastError = 'API key missing'
+      let lastError = 'GEMINI_API_KEY is empty in Vercel env'
       for (const model of models) {
         try {
-          const contents = []
-          for (const h of history) {
-            contents.push({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content || '' }] })
-          }
-          contents.push({ role: 'user', parts: [{ text: `Current form: ${JSON.stringify(currentForm)}\nUser message: ${message}` }] })
-          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+          const fullPrompt = `${SYSTEM_PROMPT}\n\nConversation history:\n${history.map(h => `${h.role}: ${h.content}`).join('\n')}\nCurrent form: ${JSON.stringify(currentForm)}\nUser message: ${message}`
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-              contents,
-              generationConfig: { responseMimeType: 'application/json' },
+              contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
             }),
           })
           if (r.ok) {
             const data = await r.json()
-            const content = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
             let parsed
-            try { parsed = JSON.parse(content) } catch { parsed = { reply: content, extracted_fields: {}, quick_replies: [], emotion_state: 'guiding' } }
-            return NextResponse.json({ ...parsed, engine_mode: 'gemini-live', model_used: model })
+            try {
+              const jsonMatch = raw.match(/\{[\s\S]*\}/)
+              parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(raw)
+            } catch {
+              parsed = { reply: raw, extracted_fields: {}, quick_replies: [], emotion_state: 'guiding' }
+            }
+            return NextResponse.json({ ...parsed, engine_mode: 'gemini-live', model_used: model, debug_reason: '' })
           } else {
             lastError = `HTTP ${r.status}: ${await r.text()}`
           }
@@ -45,7 +73,7 @@ export async function POST(req) {
           lastError = String(e)
         }
       }
-      // fallback with debug reason
+      // fallback
       const msg = message.toLowerCase()
       const extracted = {}
       const amtMatch = msg.match(/(\d[\d,]*)/)
@@ -76,42 +104,7 @@ export async function POST(req) {
       return NextResponse.json({ reply, extracted_fields: extracted, quick_replies: ['I don\'t know the UTR', 'I don\'t have the suspect ID', 'I already called 1930', 'Help me fill the form', 'Tell me a quick joke'], emotion_state: 'calming', engine_mode: 'local-fallback', debug_reason: lastError })
     }
 
-    // Groq
-    if (process.env.GROQ_API_KEY) {
-      try {
-        const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history.map(h=>({role:h.role,content:h.content})), { role: 'user', content: `Current form: ${JSON.stringify(currentForm)}\nUser message: ${message}` }], temperature: 0.5 }),
-        })
-        if (r.ok) {
-          const data = await r.json()
-          const content = data.choices?.[0]?.message?.content || ''
-          let parsed
-          try { parsed = JSON.parse(content) } catch { parsed = { reply: content, extracted_fields: {}, quick_replies: [], emotion_state: 'guiding' } }
-          return NextResponse.json({ ...parsed, engine_mode: 'groq-live' })
-        }
-      } catch {}
-    }
-    // OpenAI
-    if (process.env.OPENAI_API_KEY) {
-      try {
-        const r = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history.map(h=>({role:h.role,content:h.content})), { role: 'user', content: `Current form: ${JSON.stringify(currentForm)}\nUser message: ${message}` }], temperature: 0.5 }),
-        })
-        if (r.ok) {
-          const data = await r.json()
-          const content = data.choices?.[0]?.message?.content || ''
-          let parsed
-          try { parsed = JSON.parse(content) } catch { parsed = { reply: content, extracted_fields: {}, quick_replies: [], emotion_state: 'guiding' } }
-          return NextResponse.json({ ...parsed, engine_mode: 'openai-live' })
-        }
-      } catch {}
-    }
-
-    // fallback (no keys)
+    // no key fallback
     const msg = message.toLowerCase()
     const extracted = {}
     const amtMatch = msg.match(/(\d[\d,]*)/)
@@ -139,7 +132,7 @@ export async function POST(req) {
     else reply = 'I have captured details. Please review and submit.'
     const lastBot = [...history].reverse().find(h => h.role === 'assistant')?.content
     if (lastBot && reply === lastBot) reply = 'Let us continue. ' + reply
-    return NextResponse.json({ reply, extracted_fields: extracted, quick_replies: ['I don\'t know the UTR', 'I don\'t have the suspect ID', 'I already called 1930', 'Help me fill the form', 'Tell me a quick joke'], emotion_state: 'calming', engine_mode: 'local-fallback', debug_reason: 'no_api_key' })
+    return NextResponse.json({ reply, extracted_fields: extracted, quick_replies: ['I don\'t know the UTR', 'I don\'t have the suspect ID', 'I already called 1930', 'Help me fill the form', 'Tell me a quick joke'], emotion_state: 'calming', engine_mode: 'local-fallback', debug_reason: 'GEMINI_API_KEY is empty in Vercel env' })
   } catch (e) {
     return NextResponse.json({ reply: 'I am here to help. Please try again.', extracted_fields: {}, quick_replies: [], emotion_state: 'calming', engine_mode: 'local-fallback', debug_reason: String(e) }, { status: 200 })
   }

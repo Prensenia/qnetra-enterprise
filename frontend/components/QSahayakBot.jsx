@@ -40,6 +40,12 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
   const speechLang = (lang === 'hi' ? 'hi-IN' : lang === 'pa' ? 'pa-IN' : lang === 'ta' ? 'ta-IN' : lang === 'te' ? 'te-IN' : lang === 'bn' ? 'bn-IN' : 'en-IN')
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [chat, loading])
+  useEffect(() => {
+    fetch('/api/q-sahayak').then(r => r.json()).then(d => {
+      if (d.engine_mode) setEngineMode(d.engine_mode)
+      if (d.debug_reason) setDebugReason(d.debug_reason)
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (voiceMode && chat.length) {
