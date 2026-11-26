@@ -31,6 +31,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
   const [quickReplies, setQuickReplies] = useState(['I lost money on UPI', 'Muje dar lag raha hai', 'Tell me a quick joke to relax', 'I don\'t know my UTR'])
   const [emotion, setEmotion] = useState('calming')
   const [engineMode, setEngineMode] = useState('local-fallback')
+  const [debugReason, setDebugReason] = useState('')
   const [files, setFiles] = useState([])
   const recRef = useRef(null)
   const bottomRef = useRef(null)
@@ -93,12 +94,14 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
       if (data.extracted_fields) setForm(f => ({ ...f, ...data.extracted_fields }))
       if (data.quick_replies) setQuickReplies(data.quick_replies)
       if (data.engine_mode) setEngineMode(data.engine_mode)
+      if (data.debug_reason) setDebugReason(data.debug_reason)
     } catch {
       const data = fallbackReply(msg, form, speechLang, newChat)
       setChat(c => [...c, { role: 'assistant', text: data.reply }])
       if (data.extracted_fields) setForm(f => ({ ...f, ...data.extracted_fields }))
       if (data.quick_replies) setQuickReplies(data.quick_replies)
       setEngineMode('local-fallback')
+      setDebugReason('network or parse error')
     } finally {
       setLoading(false)
     }
@@ -122,7 +125,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
           <div>
             <div className="font-bold text-cyan">Q-Sahayak</div>
             <div className="text-[10px] text-slate-400">Live AI Crisis & Triage Companion</div>
-            <span className={`text-[10px] px-2 py-0.5 rounded border ${engineMode === 'gemini-live' ? 'border-emerald-600 text-emerald-300' : 'border-amber-600 text-amber-300'}`}>{engineMode === 'gemini-live' ? 'AI: Gemini Live' : 'AI: Edge Fallback'}</span>
+            <span title={debugReason} className={`text-[10px] px-2 py-0.5 rounded border ${engineMode === 'gemini-live' ? 'border-emerald-600 text-emerald-300' : 'border-amber-600 text-amber-300'}`}>{engineMode === 'gemini-live' ? 'AI: Gemini Live' : 'AI: Edge Fallback'}{debugReason ? ` (${debugReason.slice(0,40)})` : ''}</span>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
