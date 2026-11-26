@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { api } from '../../../lib/api'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -7,8 +7,24 @@ import QSahayakBot from '../../../components/QSahayakBot'
 import { lookupBank } from '../../../lib/bankHelplines'
 import { t, LANGS } from '../../../lib/translations'
 
+const DEMO_FORM = {
+  scam_type: 'Pig-Butchering / Fake Crypto Investment',
+  incident_time: '',
+  narrative: 'Received WhatsApp link to a fake institutional USDT trading desk. Transferred ₹2,85,000 via HDFC UPI before realizing withdrawals were blocked and funds moved to CoinDCX.',
+  victim_bank: 'HDFC Bank',
+  victim_upi: 'arjun.sharma@okhdfcbank',
+  suspect_upi: 'desk.settlement99@okicici',
+  suspect_wallet: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE',
+  exchange: 'CoinDCX (FIU-IND Registered)',
+  amount_inr: '285000',
+  utrs: ['432918475612'],
+  time_approx: '',
+}
+
 export default function CitizenHelpdesk() {
   const router = useRouter()
+  const email = typeof window !== 'undefined' ? localStorage.getItem('qnetra_user_email') : ''
+  const isDemo = email === 'victim.demo@citizen.in'
   const [step, setStep] = useState(1)
   const [lang, setLang] = useState('en')
   const [form, setForm] = useState({ scam_type: 'UPI / QR Fraud', incident_time: '', narrative: '', victim_bank: '', victim_upi: '', suspect_upi: '', suspect_wallet: '', exchange: '', amount_inr: '', utrs: [''], time_approx: '' })
@@ -20,6 +36,27 @@ export default function CitizenHelpdesk() {
   const [stateSel, setStateSel] = useState('')
   const [citySel, setCitySel] = useState('')
   const bankInfo = lookupBank(form.victim_bank)
+
+  useEffect(() => {
+    if (isDemo) {
+      setForm({ ...DEMO_FORM })
+      setNcrpId('20811260048912')
+    } else {
+      setForm({ scam_type: 'UPI / QR Fraud', incident_time: '', narrative: '', victim_bank: '', victim_upi: '', suspect_upi: '', suspect_wallet: '', exchange: '', amount_inr: '', utrs: [''], time_approx: '' })
+      setNcrpId('')
+    }
+  }, [isDemo])
+
+  function resetForm() {
+    setForm({ scam_type: 'UPI / QR Fraud', incident_time: '', narrative: '', victim_bank: '', victim_upi: '', suspect_upi: '', suspect_wallet: '', exchange: '', amount_inr: '', utrs: [''], time_approx: '' })
+    setNcrpId('')
+    setFiles([])
+  }
+
+  function loadDemo() {
+    setForm({ ...DEMO_FORM })
+    setNcrpId('20811260048912')
+  }
 
   function parseSMS() {
     const t = smsText
@@ -70,7 +107,7 @@ export default function CitizenHelpdesk() {
 
   async function submit() {
     try {
-      const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: files.map(f=>f.name) }
+      const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: email || 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: files.map(f=>f.name) }
       const res = await api('/api/v1/citizen/cases', { method: 'POST', body: JSON.stringify(payload) })
       toast.success('Case registered')
       router.push(`/citizen/case-submitted/${res.case_id}`)
@@ -90,6 +127,16 @@ export default function CitizenHelpdesk() {
 
   return (
     <div className="space-y-4">
+      {isDemo && (
+        <div className="p-3 border border-emerald-700 rounded bg-emerald-950 text-emerald-200 text-sm flex items-center justify-between flex-wrap gap-2">
+          <span>Judge Pitch Demo Mode Active</span>
+          <div className="flex gap-2">
+            <button onClick={loadDemo} className="px-3 py-1 bg-emerald-600 text-white rounded text-xs">Re-Load Demo Details</button>
+            <button onClick={resetForm} className="px-3 py-1 bg-slate-700 text-white rounded text-xs">Clear Form (Test Live Entry)</button>
+          </div>
+        </div>
+      )}
+
       <div className="p-3 border border-emerald-700 rounded bg-emerald-950 text-emerald-200 text-sm flex items-center justify-between flex-wrap gap-2">
         <div>{t(lang,'emergency')} — {t(lang,'goldenHour')}</div>
         <div className="flex gap-2">
@@ -128,7 +175,7 @@ export default function CitizenHelpdesk() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-5 min-w-0">
-          <QSahayakBot form={form} setForm={setForm} lang={lang} setLang={setLang} />
+          <QSahayakBot form={form} setForm={setForm} lang={lang} setLang={setLang} demoMode={isDemo} />
         </div>
         <div className="lg:col-span-7 min-w-0 bg-slate-800 border border-slate-700 rounded-xl p-4">
           <h2 className="text-lg font-bold text-emerald-400 mb-3">{t(lang,'title')} — {step===1 ? t(lang,'step1') : step===2 ? t(lang,'step2') : t(lang,'step3')}</h2>

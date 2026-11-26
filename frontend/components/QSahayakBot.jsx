@@ -22,7 +22,15 @@ function fallbackReply(msg, form, lang, history = []) {
   return { reply, extracted_fields: {}, quick_replies: ['I don\'t know the UTR', 'I don\'t have the suspect ID', 'I already called 1930', 'Help me fill the form'], emotion_state: 'calming' }
 }
 
-export default function QSahayakBot({ form, setForm, lang, setLang }) {
+export default function QSahayakBot({ form, setForm, lang, setLang, demoMode }) {
+  useEffect(() => {
+    if (demoMode) {
+      setChat([
+        { role: 'user', text: 'I transferred ₹2.85 lakh from my HDFC account to a fake crypto desk 25 minutes ago, please help' },
+        { role: 'assistant', text: 'Take a deep breath. Since this happened 25 minutes ago, you are right inside the Golden Hour. I have pulled up HDFC Bank\'s 24x7 fraud block desk (1800-1600) and pre-filled your details on the right—please call 1930 immediately and click Submit to alert Cyber Cell investigators.' }
+      ])
+    }
+  }, [demoMode])
   const [chat, setChat] = useState([{ role: 'assistant', text: 'Namaste! I am Q-Sahayak. Take a deep breath.' }])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
