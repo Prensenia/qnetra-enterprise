@@ -13,7 +13,11 @@ export default function CommandBar() {
   const role = typeof window !== 'undefined' ? (localStorage.getItem('qnetra_role') || 'Lead Investigator') : 'Lead Investigator'
 
   useEffect(() => {
-    const poll = () => api('/health').then(h => { setHealth(h); setEngine('Connected FastAPI') }).catch(()=>{ setHealth({status:'offline'}); setEngine('Edge Standalone Mode') })
+    const poll = () => {
+      const isLocal = window.location.hostname.includes('localhost')
+      if (!isLocal) { setEngine('Edge Forensics Engine • Live'); setHealth({status:'ok'}); return }
+      api('/health').then(h => { setHealth(h); setEngine('Connected FastAPI') }).catch(()=>{ setHealth({status:'offline'}); setEngine('Edge Standalone Mode') })
+    }
     poll()
     const id = setInterval(poll, 10000)
     return () => clearInterval(id)

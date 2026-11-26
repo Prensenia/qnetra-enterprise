@@ -155,6 +155,13 @@ export async function mockHandle(path, options = {}) {
     return getCases().filter(c => c.complainant)
   }
 
+  if (path === '/api/v1/cases' && method === 'GET') {
+    return getCases()
+  }
+  const mpre = path.match(/^\/api\/v1\/cases\/([^/]+)\/pretriage$/)
+  if (mpre && method === 'GET') {
+    return { case_id: mpre[1], institutions: ['HDFC Bank','ICICI Bank','CoinDCX'], notices: ['BNSS Sec 94 Notice'] }
+  }
   const m = path.match(/^\/api\/v1\/cases\/([^/]+)\/graph$/)
   if (m && method === 'GET') {
     const c = findCase(m[1])

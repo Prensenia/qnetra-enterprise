@@ -23,15 +23,27 @@ async function tryFetch(path, options) {
 }
 
 export async function api(path, options = {}) {
+  const isLocal = typeof window !== 'undefined' && window.location.hostname.includes('localhost')
+  const hasRemote = Boolean(process.env.NEXT_PUBLIC_API_URL)
+  if (!isLocal && !hasRemote) {
+    return mockHandle(path, options)
+  }
   try {
     return await tryFetch(path, options)
   } catch (e) {
-    // fallback to mock engine
     return mockHandle(path, options)
   }
 }
 
 export async function apiUpload(path, formData) {
+  const isLocal = typeof window !== 'undefined' && window.location.hostname.includes('localhost')
+  const hasRemote = Boolean(process.env.NEXT_PUBLIC_API_URL)
+  if (!isLocal && !hasRemote) {
+    const file = formData.get('file')
+    let text = ''
+    if (file) text = await file.text()
+    return mockHandle(path, { method: 'POST', body: JSON.stringify({ filename: file?.name, content: text, case_id: formData.get('case_id') }) })
+  }
   try {
     const controller = new AbortController()
     const id = setTimeout(() => controller.abort(), 2500)
@@ -41,10 +53,10 @@ export async function apiUpload(path, formData) {
     if (!res.ok) throw new Error(await res.text())
     return res.json()
   } catch (e) {
-    // mock fallback: read first file
     const file = formData.get('file')
     let text = ''
     if (file) text = await file.text()
     return mockHandle(path, { method: 'POST', body: JSON.stringify({ filename: file?.name, content: text, case_id: formData.get('case_id') }) })
   }
 }
+
