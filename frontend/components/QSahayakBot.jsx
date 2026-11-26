@@ -1,19 +1,38 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { api } from '../lib/api'
-import { Mic, MicOff, Volume2, VolumeX, Bot } from 'lucide-react'
+import { Mic, MicOff, Volume2, VolumeX, Bot, Paperclip } from 'lucide-react'
 import { toast } from 'sonner'
+import { t, LANGS } from '../lib/translations'
+
+function fallbackReply(msg, form, lang) {
+  const m = msg.toLowerCase()
+  let reply = 'Take a deep breath. You are not alone. Acting within the Golden Hour gives the strongest chance to freeze funds.'
+  if (m.includes('hi') || m.includes('hello') || m.includes('namaste')) reply = 'Namaste! I am Q-Sahayak. I am here to help you. Take a deep breath.'
+  else if (m.includes('joke') || m.includes('hasao')) reply = 'Why did the computer go to the doctor? Because it had a virus! Now, let us secure your account.'
+  else if (m.includes('dar') || m.includes('scared') || m.includes('panic')) reply = 'I hear you. It is completely normal to feel scared. You are not alone.'
+  else if (m.includes('called') || m.includes('1930')) reply = 'Good job calling 1930. That is the right first step.'
+  else if (m.includes('don') && m.includes('know')) reply = 'No problem at all. We can proceed with the information we have.'
+  else if (!form.victim_bank) reply += ' First, which bank or UPI app did you use, and roughly how much money was lost?'
+  else if (!form.narrative) reply += ' Can you briefly describe how the scam happened?'
+  else if (!form.utr && !form.suspect_upi) reply += ' Do you have the 12-digit UTR or suspect UPI/wallet? If not, type I don\'t know.'
+  else reply += ' I have captured details. Please review and submit.'
+  return { reply, extracted_fields: {}, quick_replies: ['I don\'t know the UTR', 'I don\'t have the suspect ID', 'I already called 1930', 'Help me fill the form'], emotion_state: 'calming' }
+}
 
 export default function QSahayakBot({ form, setForm, lang, setLang }) {
-  const [chat, setChat] = useState([{ role: 'assistant', text: 'Namaste! I am Q-Sahayak. Take a deep breath. I am here to help you through this.' }])
+  const [chat, setChat] = useState([{ role: 'assistant', text: t(lang, 'title') ? 'Namaste! I am Q-Sahayak. Take a deep breath.' : 'Namaste!' }])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [listening, setListening] = useState(false)
   const [voiceMode, setVoiceMode] = useState(false)
-  const [quickReplies, setQuickReplies] = useState(['I lost money on UPI', 'Muje dar lag raha hai', 'Tell me a quick joke to relax', 'I don\'t know my UTR', 'My account got frozen'])
+  const [quickReplies, setQuickReplies] = useState(['I lost money on UPI', 'Muje dar lag raha hai', 'Tell me a quick joke to relax', 'I don\'t know my UTR'])
   const [emotion, setEmotion] = useState('calming')
+  const [files, setFiles] = useState([])
   const recRef = useRef(null)
   const bottomRef = useRef(null)
+  const fileRef = useRef(null)
+
+  const speechLang = LANGS.find(l => l.code === lang)?.speech || 'en-IN'
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [chat, loading])
 
@@ -22,16 +41,16 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
       const last = chat[chat.length-1]
       if (last.role === 'assistant') {
         const u = new SpeechSynthesisUtterance(last.text)
-        u.lang = lang
+        u.lang = speechLang
         window.speechSynthesis.cancel()
         window.speechSynthesis.speak(u)
       }
     }
-  }, [chat, voiceMode, lang])
+  }, [chat, voiceMode, speechLang])
 
   function speak(text) {
     const u = new SpeechSynthesisUtterance(text)
-    u.lang = lang
+    u.lang = speechLang
     window.speechSynthesis.cancel()
     window.speechSynthesis.speak(u)
   }
@@ -41,7 +60,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) { toast.error('Voice not supported'); return }
     const rec = new SR()
-    rec.lang = lang
+    rec.lang = speechLang
     rec.continuous = false
     rec.interimResults = false
     rec.onresult = (e) => { setInput(e.results[0][0].transcript); setListening(false) }
@@ -53,24 +72,36 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
 
   async function send(msgOverride) {
     const msg = msgOverride || input
-    if (!msg.trim()) return
+    if (!msg.trim() && files.length === 0) return
     setInput('')
-    const newChat = [...chat, { role: 'user', text: msg }]
+    const newChat = [...chat, { role: 'user', text: msg || '(file attached)' }]
     setChat(newChat)
     setLoading(true)
     try {
-      const res = await api('/api/q-sahayak', { method: 'POST', body: JSON.stringify({ message: msg, history: newChat.map(m => ({ role: m.role, content: m.text })), current_form: form, language: lang }) })
-      setChat(c => [...c, { role: 'assistant', text: res.reply }])
-      if (res.extracted_fields) {
-        setForm(f => ({ ...f, ...res.extracted_fields }))
-      }
-      if (res.quick_replies) setQuickReplies(res.quick_replies)
-      if (res.emotion_state) setEmotion(res.emotion_state)
+      const res = await fetch('/api/q-sahayak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, history: newChat.map(m => ({ role: m.role, content: m.text })), current_form: form, language: speechLang }),
+      })
+      if (!res.ok) throw new Error('fail')
+      const data = await res.json()
+      setChat(c => [...c, { role: 'assistant', text: data.reply }])
+      if (data.extracted_fields) setForm(f => ({ ...f, ...data.extracted_fields }))
+      if (data.quick_replies) setQuickReplies(data.quick_replies)
     } catch {
-      toast.error('Q-Sahayak unavailable')
+      const data = fallbackReply(msg, form, speechLang)
+      setChat(c => [...c, { role: 'assistant', text: data.reply }])
+      if (data.extracted_fields) setForm(f => ({ ...f, ...data.extracted_fields }))
+      if (data.quick_replies) setQuickReplies(data.quick_replies)
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleFiles(e) {
+    const fs = Array.from(e.target.files || [])
+    setFiles(prev => [...prev, ...fs])
+    if (fs.length) toast.success(`${fs.length} file(s) attached`)
   }
 
   const ringColor = emotion === 'urgent_action' ? 'ring-amber-500' : emotion === 'guiding' ? 'ring-cyan-500' : 'ring-emerald-500'
@@ -88,11 +119,21 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setLang(lang === 'en-IN' ? 'hi-IN' : 'en-IN')} className="px-2 py-1 text-xs border border-slate-600 rounded">{lang === 'en-IN' ? 'English' : 'हिंदी'}</button>
+          <select value={lang} onChange={e=>setLang(e.target.value)} className="bg-slate-900 border border-slate-700 rounded text-xs px-2 py-1">
+            {LANGS.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
+          </select>
           <button onClick={() => setVoiceMode(v => !v)} className="px-2 py-1 text-xs border border-slate-600 rounded">{voiceMode ? <VolumeX size={14}/> : <Volume2 size={14}/>}</button>
           <button onClick={toggleMic} className={`px-2 py-1 text-xs border rounded ${listening ? 'bg-red-600 text-white animate-pulse' : 'border-slate-600'}`}>{listening ? <MicOff size={14}/> : <Mic size={14}/>}</button>
+          <button onClick={() => fileRef.current?.click()} className="px-2 py-1 text-xs border border-slate-600 rounded"><Paperclip size={14}/></button>
+          <input ref={fileRef} type="file" multiple className="hidden" onChange={handleFiles} />
         </div>
       </div>
+
+      {files.length > 0 && (
+        <div className="mb-2 flex gap-2 flex-wrap">
+          {files.map((f,i) => <span key={i} className="text-xs px-2 py-1 bg-slate-700 rounded">{f.name} ({Math.round(f.size/1024)}KB)</span>)}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto space-y-2 mb-3 min-h-[200px]">
         {chat.map((m,i) => (
@@ -104,17 +145,6 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
             </div>
           </div>
         ))}
-        {loading && (
-          <div className="p-2 rounded text-sm bg-slate-700 flex items-center gap-2">
-            <Bot size={14} className="text-cyan" />
-            <span className="flex gap-1">
-              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" />
-              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.15s]" />
-              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.3s]" />
-            </span>
-            <span className="text-xs text-slate-400 ml-1">Q-Sahayak is thinking...</span>
-          </div>
-        )}
         <div ref={bottomRef} />
       </div>
 
