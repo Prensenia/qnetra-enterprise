@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST='{"app\\\\investigate\\\\[caseId]\\\\page.jsx -> cytoscape":{"id":2196,"files":["static/chunks/90542734.1501b29ad1c7a890.js"]}}';
