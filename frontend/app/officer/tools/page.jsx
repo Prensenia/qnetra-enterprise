@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { api } from '../../../lib/api'
+import { api, apiUpload } from '../../../lib/api'
 import { toast } from 'sonner'
 
 export default function OfficerTools() {
@@ -10,9 +10,7 @@ export default function OfficerTools() {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('case_id', 'CYB-2026-089')
-    const token = localStorage.getItem('qnetra_token')
-    const res = await fetch((process.env.NEXT_PUBLIC_API_URL||'http://localhost:8000')+'/api/v1/ingest/batch', { method:'POST', headers: token?{Authorization:`Bearer ${token}`}:{}, body: fd })
-    const data = await res.json()
+    const data = await apiUpload('/api/v1/ingest/batch', fd)
     toast.success(`Ingested ${data.rows} rows`)
   }
   async function webhook() {

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { api } from '../../lib/api'
+import { api, apiUpload } from '../../lib/api'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Upload, Play, Download } from 'lucide-react'
@@ -24,9 +24,7 @@ export default function DashboardPage() {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('case_id', 'CYB-2026-089')
-    const token = localStorage.getItem('qnetra_token')
-    const res = await fetch((process.env.NEXT_PUBLIC_API_URL||'http://localhost:8000')+'/api/v1/ingest/batch', { method:'POST', headers: token?{Authorization:`Bearer ${token}`}:{}, body: fd })
-    const data = await res.json()
+    const data = await apiUpload('/api/v1/ingest/batch', fd)
     toast.success(`Ingested ${file.name} (${data.rows || 0} rows)`)
     setDrawerOpen(false)
     load()
@@ -111,7 +109,7 @@ export default function DashboardPage() {
                 <td>{q.title}</td>
                 <td><span className="px-2 py-0.5 rounded text-xs bg-critical/20 text-critical">{q.risk_tier}</span></td>
                 <td>₹{(q.total_inr/100000).toFixed(1)}L</td>
-                <td><button onClick={() => router.push(`/investigate/${q.case_id}`)} className="text-cyan underline text-xs">Open in Graph</button></td>
+                <td><button onClick={() => router.push(`/officer/investigate/${q.case_id}`)} className="text-cyan underline text-xs">Open in Graph</button></td>
               </tr>
             ))}
           </tbody>
@@ -138,7 +136,7 @@ export default function DashboardPage() {
 
 function Kpi({ label, value }) {
   return (
-    <div className="bg-panel border border-edge rounded p-4 glass">
+    <div className="bg-panel border border-edge rounded p-4">
       <div className="text-xs text-slate-400">{label}</div>
       <div className="text-2xl font-bold text-cyan mt-1">{value}</div>
     </div>

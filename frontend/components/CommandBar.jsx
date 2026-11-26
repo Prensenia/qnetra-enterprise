@@ -7,12 +7,13 @@ import { api } from '../lib/api'
 export default function CommandBar() {
   const router = useRouter()
   const [health, setHealth] = useState(null)
+  const [engine, setEngine] = useState('Checking...')
   const [agency, setAgency] = useState('Cyber Cell Unit - Chandigarh')
   const [query, setQuery] = useState('')
   const role = typeof window !== 'undefined' ? (localStorage.getItem('qnetra_role') || 'Lead Investigator') : 'Lead Investigator'
 
   useEffect(() => {
-    const poll = () => api('/health').then(setHealth).catch(()=>setHealth({status:'offline'}))
+    const poll = () => api('/health').then(h => { setHealth(h); setEngine('Connected FastAPI') }).catch(()=>{ setHealth({status:'offline'}); setEngine('Edge Standalone Mode') })
     poll()
     const id = setInterval(poll, 10000)
     return () => clearInterval(id)
@@ -63,6 +64,7 @@ export default function CommandBar() {
         <span className="text-xs text-slate-400">RPC</span>
       </div>
 
+      <span className="text-[10px] px-2 py-1 border border-edge rounded text-slate-400">{engine}</span>
       <div className="flex items-center gap-2 ml-2">
         <span className="px-2 py-1 text-xs border border-cyan/40 rounded text-cyan">{role}</span>
         <button onClick={logout} className="p-1.5 border border-edge rounded hover:border-critical"><LogOut size={14} /></button>

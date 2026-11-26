@@ -154,16 +154,33 @@ export default function InvestigatePage() {
       const cy = cyRef.current
       const png = cy ? cy.png({ full: true, bg: '#060913' }) : null
       const base64 = png ? png.split(',')[1] : null
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/cases/${caseId}/export-pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(localStorage.getItem('qnetra_token') ? { Authorization: `Bearer ${localStorage.getItem('qnetra_token')}` } : {}) },
-        body: JSON.stringify({ graph_png: base64 }),
-      })
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url; a.download = `${caseId}_dossier.pdf`; a.click()
-      URL.revokeObjectURL(url)
+      try {
+        const controller = new AbortController()
+        const id = setTimeout(() => controller.abort(), 2500)
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/cases/${caseId}/export-pdf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(localStorage.getItem('qnetra_token') ? { Authorization: `Bearer ${localStorage.getItem('qnetra_token')}` } : {}) },
+          body: JSON.stringify({ graph_png: base64 }),
+          signal: controller.signal,
+        })
+        clearTimeout(id)
+        if (!res.ok) throw new Error('fail')
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = `${caseId}_dossier.pdf`; a.click()
+        URL.revokeObjectURL(url)
+      } catch {
+        const res = await (await import('../../../../lib/mockEngine')).mockHandle(`/api/v1/cases/${caseId}/export-pdf`, { method: 'POST', body: JSON.stringify({ graph_png: base64 }) })
+        if (res.pdf_base64) {
+          const bytes = Uint8Array.from(atob(res.pdf_base64), c => c.charCodeAt(0))
+          const blob = new Blob([bytes], { type: 'application/pdf' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url; a.download = res.filename || `${caseId}_dossier.pdf`; a.click()
+          URL.revokeObjectURL(url)
+        } else toast.error('PDF generation failed')
+      }
       toast.success('PDF downloaded')
     } catch { toast.error('Export failed') }
   }
