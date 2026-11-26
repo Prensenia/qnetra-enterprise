@@ -91,6 +91,8 @@ def ai_helper(req: AIHelperRequest):
         reply = "Good job calling 1930. " + reply
     if "don't know" in msg_lower or "dont know" in msg_lower:
         reply = "No problem at all. " + reply
+    if "frozen" in msg_lower or "freeze" in msg_lower:
+        reply = "If your own account is frozen as collateral, you can submit a 15-day representation letter to the District/State Grievance Officer under NCRP-CFCFRMS SOP Section 9. " + reply
 
     quick = ["I don't know the UTR", "I don't have the suspect ID", "I already called 1930", "Help me fill the form"]
     return {"reply": reply, "extracted_fields": extracted, "suggested_quick_replies": quick}
@@ -111,7 +113,7 @@ class CitizenCaseRequest(BaseModel):
     amount_inr: float
     utrs: List[str] = []
     evidence_hashes: List[str] = []
-
+    ncrp_id: Optional[str] = ""
 @router.post("/cases")
 def create_citizen_case(req: CitizenCaseRequest):
     case_id = f"CYB-2026-{100 + len(CASES)}"
@@ -138,6 +140,7 @@ def create_citizen_case(req: CitizenCaseRequest):
         "incident_time": req.incident_time,
         "amount_inr": req.amount_inr,
         "utrs": req.utrs,
+        "ncrp_id": req.ncrp_id,
         "status": "NEW_CITIZEN_REPORT",
         "nodes": nodes,
         "edges": edges,

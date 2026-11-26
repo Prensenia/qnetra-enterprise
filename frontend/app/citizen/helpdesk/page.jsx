@@ -12,11 +12,27 @@ export default function CitizenHelpdesk() {
   const [form, setForm] = useState({ scam_type: 'UPI / QR Fraud', incident_time: '', narrative: '', victim_bank: '', victim_upi: '', suspect_upi: '', suspect_wallet: '', exchange: '', amount_inr: '', utrs: [''], time_approx: '' })
   const [files, setFiles] = useState([])
   const [lang, setLang] = useState('en-IN')
+  const [smsText, setSmsText] = useState('')
+  const [ncrpId, setNcrpId] = useState('')
   const bankInfo = lookupBank(form.victim_bank)
+
+  function parseSMS() {
+    const t = smsText
+    const amt = t.match(/(?:Rs\.?|INR|₹)\s*([\d,]+)/i)
+    const utr = t.match(/\b\d{12}\b/)
+    const upi = t.match(/[a-zA-Z0-9.\-_]+@[a-zA-Z]+/i)
+    const bankMatch = t.match(/SBI|HDFC|ICICI|Axis|PNB|Kotak|BoB|Canara|Union|IndusInd|Yes|IDFC|Paytm/i)
+    const newForm = { ...form }
+    if (amt) newForm.amount_inr = amt[1].replace(/,/g, '')
+    if (utr) newForm.utrs = [utr[0]]
+    if (upi) newForm.suspect_upi = upi[0]
+    if (bankMatch) newForm.victim_bank = bankMatch[0]
+    setForm(newForm)
+  }
 
   async function submit() {
     try {
-      const payload = { ...form, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: files.map(f=>f.name) }
+      const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: files.map(f=>f.name) }
       const res = await api('/api/v1/citizen/cases', { method: 'POST', body: JSON.stringify(payload) })
       toast.success('Case registered')
       router.push(`/citizen/case-submitted/${res.case_id}`)
@@ -32,6 +48,16 @@ export default function CitizenHelpdesk() {
       <div className="p-3 border border-emerald-700 rounded bg-emerald-950 text-emerald-200 text-sm">
         Voice-Guided Mode available in Q-Sahayak. Use mic/speaker controls.
       </div>
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+        <h3 className="text-sm font-bold text-emerald-400 mb-2">Paste Bank/UPI Debit SMS or Receipt Text</h3>
+        <textarea value={smsText} onChange={e=>setSmsText(e.target.value)} placeholder="Paste SMS/receipt..." className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm" rows={3} />
+        <button onClick={parseSMS} className="mt-2 px-3 py-1 bg-emerald-600 text-white rounded text-sm">Auto-Fill Form</button>
+      </div>
+      {(form.scam_type === 'APK / Remote Access Scam' || smsText.toLowerCase().includes('http') || smsText.toLowerCase().includes('apk')) && (
+        <div className="p-3 border border-red-600 rounded bg-red-950 text-red-200 text-sm">
+          Device Containment: Turn ON Airplane Mode, disconnect Wi-Fi, uninstall unknown APKs, revoke Accessibility/Device Admin permissions, do not enter UPI PINs until passwords reset.
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-6">
         <QSahayakBot form={form} setForm={setForm} lang={lang} setLang={setLang} />
 
@@ -68,6 +94,7 @@ export default function CitizenHelpdesk() {
                 <button onClick={() => setUnknown('exchange', 'UNKNOWN_PLATFORM')} className="px-2 py-1 text-xs border border-slate-600 rounded">I Don't Know</button>
               </div>
               <input type="number" value={form.amount_inr} onChange={e=>setForm({...form, amount_inr: e.target.value})} placeholder="Amount Lost (INR)" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+              <input value={ncrpId} onChange={e=>setNcrpId(e.target.value)} placeholder="14-digit NCRP Acknowledgement Number (optional)" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
               <div className="flex gap-2">
                 <input value={form.utrs[0]} onChange={e=>setForm({...form, utrs: [e.target.value]})} placeholder="12-digit UTR" className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
                 <button onClick={() => setUnknown('utrs', ['UNKNOWN_UTR_BANK_STATEMENT_PENDING'])} className="px-2 py-1 text-xs border border-slate-600 rounded">I Don't Know</button>

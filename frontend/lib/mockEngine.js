@@ -114,6 +114,7 @@ export async function mockHandle(path, options = {}) {
     if (msg.includes('dar') || msg.includes('scared')) reply = 'I hear you, it is understandable to feel scared. ' + reply
     if (msg.includes('called') || msg.includes('1930')) reply = 'Good job calling 1930. ' + reply
     if (msg.includes('don') && msg.includes('know')) reply = 'No problem at all. ' + reply
+    if (msg.includes('frozen') || msg.includes('freeze')) reply = 'If your own account is frozen as collateral, submit a 15-day representation letter to the District/State Grievance Officer under NCRP-CFCFRMS SOP Section 9. ' + reply
     return { reply, extracted_fields: extracted, suggested_quick_replies: ['I don\'t know the UTR', 'I don\'t have the suspect ID', 'I already called 1930', 'Help me fill the form'] }
   }
 

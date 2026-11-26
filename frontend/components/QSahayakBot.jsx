@@ -10,7 +10,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
   const [loading, setLoading] = useState(false)
   const [listening, setListening] = useState(false)
   const [voiceMode, setVoiceMode] = useState(false)
-  const [quickReplies, setQuickReplies] = useState(['I lost money on UPI', 'Muje dar lag raha hai', 'Tell me a quick joke to relax', 'I don\'t know my UTR'])
+  const [quickReplies, setQuickReplies] = useState(['I lost money on UPI', 'Muje dar lag raha hai', 'Tell me a quick joke to relax', 'I don\'t know my UTR', 'My account got frozen'])
   const [emotion, setEmotion] = useState('calming')
   const recRef = useRef(null)
   const bottomRef = useRef(null)

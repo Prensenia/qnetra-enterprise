@@ -5,6 +5,11 @@ export default function CaseSubmitted() {
   const params = useParams()
   const caseId = params.caseId
   const script = `I am reporting cyber fraud. Case ID ${caseId}. I lost funds via UPI. Please initiate lien hold under CFCFRMS.`
+  function shareSOS() {
+    const msg = `Case ID: ${caseId}\nBank Block: Call 1930\nChecklist: Call 1930, file cybercrime.gov.in, submit bank lien letter.`
+    navigator.clipboard.writeText(msg)
+    alert('SOS packet copied')
+  }
   const letter = `To: Home Bank Branch Manager\nSubject: Disputed Lien Request - Case ${caseId}\nPlease place lien on disputed amount pending investigation.`
   return (
     <div className="max-w-2xl mx-auto space-y-4">
@@ -31,6 +36,7 @@ export default function CaseSubmitted() {
         <h2 className="font-bold mb-2">Home Bank Disputed-Lien Request Letter</h2>
         <pre className="text-xs text-slate-300 whitespace-pre-wrap">{letter}</pre>
       </div>
+      <button onClick={shareSOS} className="px-3 py-2 bg-emerald-600 text-white rounded">Share SOS Packet with Family</button>
     </div>
   )
 }
