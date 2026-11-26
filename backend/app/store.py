@@ -1,6 +1,7 @@
 import hashlib, json, uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
+from .vasp_intel import enrich_node
 
 USERS = {
     "admin@cybernautics.in": {"password": "Admin@123", "role": "Lead Investigator"},
@@ -48,12 +49,12 @@ nodes_089 = [
     {"id": "UPI_MULE_5", "type": "UPI", "label": "Mule UPI 5", "risk_score": 70, "risk_tier": "HIGH", "amount_inr": 2200000, "timestamp": _ts(13)},
     {"id": "UPI_MULE_6", "type": "UPI", "label": "Mule UPI 6", "risk_score": 82, "risk_tier": "HIGH", "amount_inr": 2700000, "timestamp": _ts(15)},
     {"id": "CONSOL_BANK", "type": "BankAccount", "label": "Consolidation Bank", "risk_score": 90, "risk_tier": "CRITICAL", "amount_inr": 14200000, "timestamp": _ts(20)},
-    {"id": "VASP_ONRAMP", "type": "VASPExchange", "label": "Indian VASP On-Ramp", "risk_score": 65, "risk_tier": "HIGH", "amount_usdt": 157000, "timestamp": _ts(25)},
+    {"id": "VASP_ONRAMP", "type": "VASPExchange", "label": "CoinDCX On-Ramp (Neblio)", "risk_score": 65, "risk_tier": "HIGH", "amount_usdt": 157000, "timestamp": _ts(25)},
     {"id": "WALLET_TRON_1", "type": "CryptoWallet", "label": "TRON Wallet 1", "risk_score": 88, "risk_tier": "CRITICAL", "amount_usdt": 80000, "timestamp": _ts(30)},
     {"id": "WALLET_TRON_2", "type": "CryptoWallet", "label": "TRON Wallet 2", "risk_score": 85, "risk_tier": "CRITICAL", "amount_usdt": 45000, "timestamp": _ts(32)},
     {"id": "WALLET_ETH_1", "type": "CryptoWallet", "label": "ETH Wallet 1", "risk_score": 80, "risk_tier": "HIGH", "amount_usdt": 32000, "timestamp": _ts(35)},
-    {"id": "MIXER_1", "type": "Mixer", "label": "Mixer Cluster", "risk_score": 95, "risk_tier": "CRITICAL", "amount_usdt": 120000, "timestamp": _ts(40)},
-    {"id": "OFFSHORE_1", "type": "SanctionedCluster", "label": "Offshore Cluster", "risk_score": 99, "risk_tier": "CRITICAL", "amount_usdt": 100000, "timestamp": _ts(50)},
+    {"id": "MIXER_1", "type": "Mixer", "label": "Mixer (Tornado-style)", "risk_score": 95, "risk_tier": "CRITICAL", "amount_usdt": 120000, "timestamp": _ts(40)},
+    {"id": "OFFSHORE_1", "type": "SanctionedCluster", "label": "Binance Hot Wallet #14", "risk_score": 99, "risk_tier": "CRITICAL", "amount_usdt": 100000, "timestamp": _ts(50)},
 ]
 edges_089 = [
     {"id": "e1", "source": "VICTIM_001", "target": "UPI_MULE_1", "type": "UPI", "amount": 2300000, "asset": "INR", "timestamp": _ts(5), "evidence_type": "confirmed"},
@@ -99,6 +100,8 @@ edges_094 = [
     {"id": "b8", "source": "W5", "target": "RETURN_CLUSTER", "type": "Crypto", "amount": 3000, "asset": "USDT", "timestamp": _ts(35), "evidence_type": "inferred"},
 ]
 
+for n in nodes_089 + nodes_094:
+    enrich_node(n)
 CASES["CYB-2026-089"] = {
     "case_id": "CYB-2026-089",
     "title": "UPI-to-USDT Mule Syndicate",

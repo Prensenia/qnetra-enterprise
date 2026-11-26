@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../../../lib/api'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { Play, Pause, SkipForward, SkipBack, Network, Route, Layers } from 'lucide-react'
+import { Play, Pause, SkipForward, SkipBack } from 'lucide-react'
 
 const NODE_STYLE = {
   BankAccount: { shape: 'round-rectangle', color: '#5b8dd6' },
@@ -23,6 +23,7 @@ export default function InvestigatePage() {
   const [graph, setGraph] = useState(null)
   const [analysis, setAnalysis] = useState(null)
   const [audit, setAudit] = useState([])
+  const [correlations, setCorrelations] = useState([])
   const [selected, setSelected] = useState(null)
   const [layout, setLayout] = useState('breadthfirst')
   const [threshold, setThreshold] = useState(0)
@@ -33,6 +34,7 @@ export default function InvestigatePage() {
   const [times, setTimes] = useState([])
   const [tab, setTab] = useState('entity')
   const [notes, setNotes] = useState('')
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     api(`/api/v1/cases/${caseId}/graph`).then(g => {
@@ -42,6 +44,7 @@ export default function InvestigatePage() {
       setTimeIndex(ts.length)
     }).catch(()=>{})
     api(`/api/v1/cases/${caseId}/audit`).then(setAudit).catch(()=>{})
+    api(`/api/v1/cases/${caseId}/correlations`).then(r => setCorrelations(r.correlations || [])).catch(()=>{})
   }, [caseId])
 
   useEffect(() => {
@@ -82,13 +85,11 @@ export default function InvestigatePage() {
       const visibleByTime = ts.length === 0 || ti >= ts.length || !e.data('ts') || ts.indexOf(e.data('ts')) <= ti
       e.style('display', visibleByThreshold && visibleByTime ? 'element' : 'none')
     })
-    // collapse mule rings: hide UPI nodes if collapsed
     cy.nodes().forEach(n => {
       if (col && n.data('type') === 'UPI') n.style('display', 'none')
       else n.style('display', 'element')
     })
     if (col) {
-      // show a cluster node if not exists
       if (cy.getElementById('MULE_CLUSTER').empty()) {
         cy.add({ data: { id: 'MULE_CLUSTER', label: 'Mule Cluster', type: 'SanctionedCluster', risk: 90 }, position: { x: 200, y: 200 } })
       }
@@ -129,7 +130,6 @@ export default function InvestigatePage() {
     cy.elements().style('opacity', 1)
   }
 
-  // temporal playback
   useEffect(() => {
     if (!playing || times.length === 0) return
     const id = setInterval(() => {
@@ -168,6 +168,15 @@ export default function InvestigatePage() {
     } catch { toast.error('Export failed') }
   }
 
+  async function generateNotice() {
+    try {
+      const target = nodeData?.meta?.exchange || nodeData?.meta?.ifsc || 'VASP'
+      const res = await api(`/api/v1/cases/${caseId}/generate-notice`, { method: 'POST', body: JSON.stringify({ target }) })
+      setNotice(res.notice)
+      toast.success('Notice generated')
+    } catch { toast.error('Notice failed') }
+  }
+
   function saveNotes() {
     localStorage.setItem(`notes_${caseId}`, notes)
     toast.success('Notes saved')
@@ -204,6 +213,12 @@ export default function InvestigatePage() {
         <aside className="col-span-3 border-r border-edge p-3 overflow-y-auto">
           <h2 className="text-sm font-bold mb-2">Case / Evidence / Audit</h2>
           <div className="text-xs text-slate-400 mb-3">Nodes: {graph?.nodes?.length || 0} Edges: {graph?.edges?.length || 0}</div>
+          {correlations.length > 0 && (
+            <div className="mb-3 p-2 border border-elevated rounded text-xs">
+              <div className="font-bold text-elevated mb-1">Cross-Case Correlations</div>
+              {correlations.map((c,i) => <div key={i}>{c.other_case}: {c.shared_nodes.join(', ')}</div>)}
+            </div>
+          )}
           <div className="space-y-1">
             {audit.map(a => (
               <div key={a.id} className="text-[10px] text-slate-500 border-b border-edge pb-1">{a.action} - {a.details}</div>
@@ -212,7 +227,6 @@ export default function InvestigatePage() {
         </aside>
         <main className="col-span-6 relative flex flex-col">
           <div ref={boxRef} className="flex-1 min-h-0" />
-          {/* temporal scrubber */}
           <div className="border-t border-edge p-3 bg-panel/80">
             <div className="flex items-center gap-2 mb-2">
               <button onClick={() => setPlaying(p => !p)} className="px-2 py-1 border border-edge rounded text-xs">{playing ? <Pause size={12}/> : <Play size={12}/>}</button>
@@ -240,9 +254,18 @@ export default function InvestigatePage() {
                   <div className="text-xs text-slate-400">Type: {nodeData.type}</div>
                   <div className="text-xs">Risk: {nodeData.risk}/100</div>
                   <div className="h-2 bg-obsidian rounded"><div className="h-2 bg-critical rounded" style={{width: `${nodeData.risk}%`}} /></div>
-                  <div className="text-xs text-slate-400">Metadata: {JSON.stringify(nodeData.meta || {})}</div>
+                  <div className="text-xs text-slate-400 mt-2">Attribution:</div>
+                  <div className="text-[10px] text-slate-400 bg-obsidian p-2 rounded space-y-1">
+                    {Object.entries(nodeData.meta || {}).map(([k,v]) => (
+                      <div key={k}><span className="text-cyan">{k}:</span> {String(v)}</div>
+                    ))}
+                  </div>
                   <textarea value={notes} onChange={e=>setNotes(e.target.value)} className="w-full bg-obsidian border border-edge rounded p-2 text-xs" rows={4} placeholder="Investigator notes..." />
-                  <button onClick={saveNotes} className="px-3 py-1 bg-cyan text-black rounded text-xs">Save Notes</button>
+                  <div className="flex gap-2">
+                    <button onClick={saveNotes} className="px-3 py-1 bg-cyan text-black rounded text-xs">Save Notes</button>
+                    <button onClick={generateNotice} className="px-3 py-1 bg-panel border border-edge rounded text-xs">Draft BNSS Sec 94 Notice</button>
+                  </div>
+                  {notice && <pre className="text-[10px] text-slate-400 bg-obsidian p-2 rounded overflow-auto">{notice}</pre>}
                 </>
               )}
               {edgeData && (

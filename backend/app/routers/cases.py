@@ -19,6 +19,31 @@ def get_graph(case_id: str):
 def get_audit(case_id: str):
     return [e for e in AUDIT_LOGS if e["case_id"] == case_id]
 
+@router.get("/cases/{case_id}/correlations")
+def correlations(case_id: str):
+    case = CASES.get(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    shared = []
+    for other_id, other in CASES.items():
+        if other_id == case_id:
+            continue
+        ids = {n["id"] for n in case["nodes"]}
+        shared_ids = ids & {n["id"] for n in other["nodes"]}
+        if shared_ids:
+            shared.append({"other_case": other_id, "shared_nodes": list(shared_ids)})
+    return {"case_id": case_id, "correlations": shared}
+
+@router.post("/cases/{case_id}/generate-notice")
+def generate_notice(case_id: str, payload: dict = {}):
+    case = CASES.get(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    target = payload.get("target", "VASP")
+    content = f"NOTICE u/s 94 BNSS / Sec 91 CrPC\nTo: {target}\nCase: {case_id}\nTraced INR: {case['total_inr']}\nTraced USDT: {case['total_usdt']}\nNodes: {len(case['nodes'])}\n"
+    add_audit(case_id, "system@cybernautics.in", "System", "GENERATE_NOTICE", f"Notice for {target}")
+    return {"status": "ok", "notice": content}
+
 @router.post("/cases/{case_id}/export-pdf")
 def export_pdf(case_id: str, payload: dict = {}):
     case = CASES.get(case_id)
@@ -41,7 +66,6 @@ def export_pdf(case_id: str, payload: dict = {}):
     y -= 15
     c.drawString(50, y, f"Nodes: {len(case['nodes'])}  Edges: {len(case['edges'])}")
     y -= 25
-    # embed graph snapshot if provided
     if graph_png:
         try:
             img_data = base64.b64decode(graph_png)
