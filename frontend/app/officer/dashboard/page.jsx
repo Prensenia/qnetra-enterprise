@@ -9,8 +9,9 @@ export default function OfficerDashboard() {
   const router = useRouter()
   const [summary, setSummary] = useState(null)
   const [search, setSearch] = useState('')
+  const [citizenCount, setCitizenCount] = useState(0)
 
-  async function load() { try { setSummary(await api('/api/v1/dashboard/summary')) } catch {} }
+  async function load() { try { setSummary(await api('/api/v1/dashboard/summary')); const c = await api('/api/v1/citizen/cases'); setCitizenCount(c.length) } catch {} }
   useEffect(() => { load() }, [])
 
   async function webhook() {
@@ -32,6 +33,7 @@ export default function OfficerDashboard() {
         <Kpi label="Traced Crypto (USDT)" value={`$${summary.total_traced_usdt.toLocaleString()}`} />
         <Kpi label="Mule & VASP Clusters" value={summary.flagged_mule_clusters} />
       </div>
+      {citizenCount > 0 && <div className="px-3 py-2 bg-emerald-900/40 border border-emerald-700 rounded text-sm text-emerald-300">New Citizen Submissions: {citizenCount}</div>}
       <div className="bg-panel border border-edge rounded p-4">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-sm font-bold">Unified Case Queue</h2>

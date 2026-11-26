@@ -12,7 +12,6 @@ function load(key, fallback) {
 function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)) } catch {} }
 
 function sha256(str) {
-  // simple hash fallback
   let h = 0; for (let i=0;i<str.length;i++){ h = (h<<5)-h+str.charCodeAt(i); h|=0 } return Math.abs(h).toString(16)
 }
 
@@ -63,7 +62,6 @@ export async function mockHandle(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase()
   const body = options.body ? (typeof options.body === 'string' ? JSON.parse(options.body) : options.body) : {}
 
-  // auth
   if (path === '/api/v1/auth/login' && method === 'POST') {
     const u = getUsers().find(x => x.email === body.email && x.password === body.password)
     if (!u) throw new Error('Invalid credentials')
@@ -78,10 +76,8 @@ export async function mockHandle(path, options = {}) {
     return { access_token: 'mock-token', token_type: 'bearer', role: u.role, email: u.email }
   }
 
-  // health
   if (path === '/health') return { status: 'ok', postgres: { status: 'simulated' }, neo4j: { status: 'simulated' }, rpc_adapter: 'fallback_simulator' }
 
-  // dashboard
   if (path === '/api/v1/dashboard/summary') {
     const cases = getCases()
     return {
@@ -94,35 +90,50 @@ export async function mockHandle(path, options = {}) {
     }
   }
 
-  // citizen ai helper
   if (path === '/api/v1/citizen/ai-helper' && method === 'POST') {
     const msg = (body.message || '').toLowerCase()
+    const cf = body.current_form || {}
     const extracted = {}
     if (msg.includes('upi')) extracted.channel = 'UPI'
     if (msg.includes('crypto') || msg.includes('usdt')) extracted.channel = 'Crypto'
     const amtMatch = msg.match(/(\d[\d,]*)/)
-    if (amtMatch) extracted.amount = parseFloat(amtMatch[1].replace(/,/g,''))
-    return { guidance: 'Take a deep breath. You are not alone. Acting within the Golden Hour gives the strongest chance to freeze funds. Please call 1930 and your bank fraud desk immediately.', extracted, next_question: 'What was the amount lost and the 12-digit UTR/transaction hash?' }
+    if (amtMatch && !cf.amount_inr) extracted.amount_inr = parseFloat(amtMatch[1].replace(/,/g,''))
+    if (msg.includes('sbi')) extracted.bank_name = 'SBI'
+    if (msg.includes('hdfc')) extracted.bank_name = 'HDFC'
+    if (msg.includes('icici')) extracted.bank_name = 'ICICI'
+    if (msg.includes('don') && msg.includes('know')) {
+      if (!cf.utr) extracted.utr = 'UNKNOWN_UTR_BANK_STATEMENT_PENDING'
+      if (!cf.suspect_upi) extracted.suspect_upi = 'UNKNOWN_SUSPECT_IDENTIFIER'
+      if (!cf.exchange) extracted.exchange = 'UNKNOWN_PLATFORM'
+    }
+    let reply = 'Take a deep breath. You are not alone. Acting within the Golden Hour gives the strongest chance to freeze funds.'
+    if (!cf.victim_bank && !extracted.bank_name) reply += ' First, which bank or UPI app did you use, and roughly how much money was lost?'
+    else if (!cf.narrative) reply += ' Can you briefly describe how the scam happened?'
+    else if (!cf.utr && !cf.suspect_upi) reply += ' Do you have the 12-digit UTR or suspect UPI/wallet? If not, type I don\'t know.'
+    else reply += ' I have captured details. Please review and submit.'
+    if (msg.includes('dar') || msg.includes('scared')) reply = 'I hear you, it is understandable to feel scared. ' + reply
+    if (msg.includes('called') || msg.includes('1930')) reply = 'Good job calling 1930. ' + reply
+    if (msg.includes('don') && msg.includes('know')) reply = 'No problem at all. ' + reply
+    return { reply, extracted_fields: extracted, suggested_quick_replies: ['I don\'t know the UTR', 'I don\'t have the suspect ID', 'I already called 1930', 'Help me fill the form'] }
   }
 
-  // citizen cases
   if (path === '/api/v1/citizen/cases' && method === 'POST') {
     const caseId = `CYB-2026-${100 + getCases().length}`
     const nodes = [{ id: 'VICTIM', type: 'BankAccount', label: 'Victim Account', risk_score: 10, risk_tier: 'LOW', amount_inr: body.amount_inr, timestamp: body.incident_time, metadata: { name: body.complainant_name } }]
     const edges = []
-    if (body.suspect_upi) {
+    if (body.suspect_upi && body.suspect_upi !== 'UNKNOWN_SUSPECT_IDENTIFIER') {
       nodes.push({ id: 'SUSPECT_UPI', type: 'UPI', label: body.suspect_upi, risk_score: 75, risk_tier: 'HIGH', amount_inr: body.amount_inr, timestamp: body.incident_time, metadata: {} })
       edges.push({ id: 'e_v_u', source: 'VICTIM', target: 'SUSPECT_UPI', type: 'UPI', amount: body.amount_inr, asset: 'INR', timestamp: body.incident_time, evidence_type: 'confirmed' })
     }
-    if (body.suspect_wallet) {
+    if (body.suspect_wallet && body.suspect_wallet !== 'UNKNOWN_SUSPECT_IDENTIFIER') {
       nodes.push({ id: 'SUSPECT_WALLET', type: 'CryptoWallet', label: body.suspect_wallet, risk_score: 85, risk_tier: 'CRITICAL', amount_usdt: (body.amount_inr||0)/90, timestamp: body.incident_time, metadata: { exchange: body.exchange } })
-      edges.push({ id: 'e_u_w', source: body.suspect_upi ? 'SUSPECT_UPI' : 'VICTIM', target: 'SUSPECT_WALLET', type: 'Crypto', amount: (body.amount_inr||0)/90, asset: 'USDT', timestamp: body.incident_time, evidence_type: 'inferred' })
+      edges.push({ id: 'e_u_w', source: body.suspect_upi && body.suspect_upi !== 'UNKNOWN_SUSPECT_IDENTIFIER' ? 'SUSPECT_UPI' : 'VICTIM', target: 'SUSPECT_WALLET', type: 'Crypto', amount: (body.amount_inr||0)/90, asset: 'USDT', timestamp: body.incident_time, evidence_type: 'inferred' })
     }
-    if (body.exchange) {
+    if (body.exchange && body.exchange !== 'UNKNOWN_PLATFORM') {
       nodes.push({ id: 'VASP', type: 'VASPExchange', label: body.exchange, risk_score: 60, risk_tier: 'HIGH', amount_usdt: (body.amount_inr||0)/90, timestamp: body.incident_time, metadata: {} })
       edges.push({ id: 'e_w_vasp', source: 'SUSPECT_WALLET', target: 'VASP', type: 'Exchange', amount: (body.amount_inr||0)/90, asset: 'USDT', timestamp: body.incident_time, evidence_type: 'inferred' })
     }
-    const c = { case_id: caseId, title: `Citizen Complaint - ${body.scam_type}`, description: body.narrative, complainant: { name: body.complainant_name }, scam_type: body.scam_type, incident_time: body.incident_time, amount_inr: body.amount_inr, utrs: body.utrs || [], nodes, edges, total_inr: body.amount_inr || 0, total_usdt: (body.amount_inr||0)/90 }
+    const c = { case_id: caseId, title: `Citizen Complaint - ${body.scam_type}`, description: body.narrative, complainant: { name: body.complainant_name }, scam_type: body.scam_type, incident_time: body.incident_time, amount_inr: body.amount_inr, utrs: body.utrs || [], status: 'NEW_CITIZEN_REPORT', nodes, edges, total_inr: body.amount_inr || 0, total_usdt: (body.amount_inr||0)/90 }
     const cases = getCases(); cases.push(c); setCases(cases)
     addAudit(caseId, 'CASE_SUBMITTED', `${body.scam_type} amount ${body.amount_inr}`)
     return { case_id: caseId, status: 'registered' }
@@ -131,7 +142,6 @@ export async function mockHandle(path, options = {}) {
     return getCases().filter(c => c.complainant)
   }
 
-  // cases graph/audit/correlations
   const m = path.match(/^\/api\/v1\/cases\/([^/]+)\/graph$/)
   if (m && method === 'GET') {
     const c = findCase(m[1]); if (!c) throw new Error('not found')
@@ -160,7 +170,6 @@ export async function mockHandle(path, options = {}) {
   }
   const mpdf = path.match(/^\/api\/v1\/cases\/([^/]+)\/export-pdf$/)
   if (mpdf && method === 'POST') {
-    // generate minimal PDF
     const pdf = `%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF`
     const b64 = btoa(pdf)
     return { pdf_base64: b64, filename: `${mpdf[1]}_dossier.pdf` }
@@ -174,7 +183,6 @@ export async function mockHandle(path, options = {}) {
     const keys = getKeys(); keys.unshift(k); setKeys(keys)
     return k
   }
-  // ingest
   if (path === '/api/v1/ingest/webhook' && method === 'POST') {
     return { status: 'ok', received: true }
   }
