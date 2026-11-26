@@ -4,23 +4,26 @@ import { Mic, MicOff, Volume2, VolumeX, Bot, Paperclip } from 'lucide-react'
 import { toast } from 'sonner'
 import { t, LANGS } from '../lib/translations'
 
-function fallbackReply(msg, form, lang) {
+function fallbackReply(msg, form, lang, history = []) {
   const m = msg.toLowerCase()
   let reply = 'Take a deep breath. You are not alone. Acting within the Golden Hour gives the strongest chance to freeze funds.'
-  if (m.includes('hi') || m.includes('hello') || m.includes('namaste')) reply = 'Namaste! I am Q-Sahayak. I am here to help you. Take a deep breath.'
+  if ((m.includes('hi') || m.includes('hello') || m.includes('namaste')) && history.length <= 1) reply = 'Namaste! I am Q-Sahayak. I am here to help you. Take a deep breath.'
   else if (m.includes('joke') || m.includes('hasao')) reply = 'Why did the computer go to the doctor? Because it had a virus! Now, let us secure your account.'
-  else if (m.includes('dar') || m.includes('scared') || m.includes('panic')) reply = 'I hear you. It is completely normal to feel scared. You are not alone.'
+  else if (m.includes('dar') || m.includes('scared') || m.includes('panic')) reply = 'I hear you. It is completely normal to feel scared. You are not alone. We will act step by step.'
   else if (m.includes('called') || m.includes('1930')) reply = 'Good job calling 1930. That is the right first step.'
   else if (m.includes('don') && m.includes('know')) reply = 'No problem at all. We can proceed with the information we have.'
+  else if (m.includes('helpful') || m.includes('how') || m.includes('work') || m.includes('what will')) reply = 'Q-Netra helps freeze funds during the Golden Hour by structuring your UTR and bank trail for 1930 / CFCFRMS and auto-dispatching BNSS Sec 94 notices to banks and exchanges. Please share your bank name or amount lost next.'
   else if (!form.victim_bank) reply += ' First, which bank or UPI app did you use, and roughly how much money was lost?'
   else if (!form.narrative) reply += ' Can you briefly describe how the scam happened?'
   else if (!form.utr && !form.suspect_upi) reply += ' Do you have the 12-digit UTR or suspect UPI/wallet? If not, type I don\'t know.'
   else reply += ' I have captured details. Please review and submit.'
+  const lastBot = [...history].reverse().find(h => h.role === 'assistant')?.content
+  if (lastBot && reply === lastBot) reply = 'Let us continue. ' + reply
   return { reply, extracted_fields: {}, quick_replies: ['I don\'t know the UTR', 'I don\'t have the suspect ID', 'I already called 1930', 'Help me fill the form'], emotion_state: 'calming' }
 }
 
 export default function QSahayakBot({ form, setForm, lang, setLang }) {
-  const [chat, setChat] = useState([{ role: 'assistant', text: t(lang, 'title') ? 'Namaste! I am Q-Sahayak. Take a deep breath.' : 'Namaste!' }])
+  const [chat, setChat] = useState([{ role: 'assistant', text: 'Namaste! I am Q-Sahayak. Take a deep breath.' }])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [listening, setListening] = useState(false)
@@ -32,7 +35,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
   const bottomRef = useRef(null)
   const fileRef = useRef(null)
 
-  const speechLang = LANGS.find(l => l.code === lang)?.speech || 'en-IN'
+  const speechLang = (lang === 'hi' ? 'hi-IN' : lang === 'pa' ? 'pa-IN' : lang === 'ta' ? 'ta-IN' : lang === 'te' ? 'te-IN' : lang === 'bn' ? 'bn-IN' : 'en-IN')
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [chat, loading])
 
@@ -89,7 +92,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
       if (data.extracted_fields) setForm(f => ({ ...f, ...data.extracted_fields }))
       if (data.quick_replies) setQuickReplies(data.quick_replies)
     } catch {
-      const data = fallbackReply(msg, form, speechLang)
+      const data = fallbackReply(msg, form, speechLang, newChat)
       setChat(c => [...c, { role: 'assistant', text: data.reply }])
       if (data.extracted_fields) setForm(f => ({ ...f, ...data.extracted_fields }))
       if (data.quick_replies) setQuickReplies(data.quick_replies)
@@ -108,7 +111,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col h-full">
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-full bg-slate-900 border-2 ${ringColor} flex items-center justify-center animate-pulse`}>
             <Bot className="text-cyan" size={20} />
@@ -118,7 +121,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang }) {
             <div className="text-[10px] text-slate-400">Live AI Crisis & Triage Companion</div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <select value={lang} onChange={e=>setLang(e.target.value)} className="bg-slate-900 border border-slate-700 rounded text-xs px-2 py-1">
             {LANGS.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
           </select>

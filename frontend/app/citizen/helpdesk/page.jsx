@@ -84,10 +84,11 @@ export default function CitizenHelpdesk() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6">
-        <QSahayakBot form={form} setForm={setForm} lang={lang} setLang={setLang} />
-
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-5 min-w-0">
+          <QSahayakBot form={form} setForm={setForm} lang={lang} setLang={setLang} />
+        </div>
+        <div className="lg:col-span-7 min-w-0 bg-slate-800 border border-slate-700 rounded-xl p-4">
           <h2 className="text-lg font-bold text-emerald-400 mb-3">{t(lang,'title')} — {step===1 ? t(lang,'step1') : step===2 ? t(lang,'step2') : t(lang,'step3')}</h2>
           {step === 1 && (
             <div className="space-y-3">

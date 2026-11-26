@@ -73,7 +73,7 @@ export async function POST(req) {
     }
     let reply = ''
     const historyText = history.map(h => h.content || '').join(' ').toLowerCase()
-    if (msg.includes('hi') || msg.includes('hello') || msg.includes('namaste')) reply = 'Namaste! I am Q-Sahayak. I am here to help you. Take a deep breath.'
+    if ((msg.includes('hi') || msg.includes('hello') || msg.includes('namaste')) && history.length <= 1) reply = 'Namaste! I am Q-Sahayak. I am here to help you. Take a deep breath.'
     else if (msg.includes('joke') || msg.includes('hasao')) reply = 'Why did the computer go to the doctor? Because it had a virus! 😄 Now, let us secure your account.'
     else if (msg.includes('dar') || msg.includes('scared') || msg.includes('panic')) reply = 'I hear you. It is completely normal to feel scared. You are not alone. We will act step by step.'
     else if (msg.includes('called') || msg.includes('1930')) reply = 'Good job calling 1930. That is the right first step.'
@@ -81,6 +81,7 @@ export async function POST(req) {
     else if (!currentForm.victim_bank && !extracted.bank_name) reply = 'First, which bank or UPI app did you use, and roughly how much money was lost?'
     else if (!currentForm.narrative) reply = 'Can you briefly describe how the scam happened?'
     else if (!currentForm.utr && !currentForm.suspect_upi) reply = 'Do you have the 12-digit UTR or suspect UPI/wallet? If not, type I don\'t know.'
+    else if (msg.includes('helpful') || msg.includes('how') || msg.includes('work') || msg.includes('what will')) reply = 'Q-Netra helps freeze funds during the Golden Hour by structuring your UTR and bank trail for 1930 / CFCFRMS and auto-dispatching BNSS Sec 94 notices to banks and exchanges. Please share your bank name or amount lost next.'
     else reply = 'I have captured details. Please review and submit.'
     // avoid repeating last reply
     const lastBot = [...history].reverse().find(h => h.role === 'assistant')?.content
