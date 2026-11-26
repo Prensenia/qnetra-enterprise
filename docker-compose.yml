@@ -1,0 +1,53 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: qnetra_enterprise
+      POSTGRES_USER: qnetra_admin
+      POSTGRES_PASSWORD: qnetra_pg_secure_2026
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qnetra_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/qnetra_neo4j_secure_2026
+    ports: ["7474:7474", "7687:7687"]
+    volumes: [neodata:/data]
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "qnetra_neo4j_secure_2026", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports: ["8000:8000"]
+    env_file: .env
+    depends_on:
+      postgres: { condition: service_healthy }
+      neo4j: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    build: ./frontend
+    ports: ["3000:3000"]
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      backend: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  neodata:
