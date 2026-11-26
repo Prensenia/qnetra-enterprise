@@ -40,7 +40,7 @@ def generate_notice(case_id: str, payload: dict = {}):
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     target = payload.get("target", "VASP")
-    content = f"NOTICE u/s 94 BNSS / Sec 91 CrPC\nTo: {target}\nCase: {case_id}\nTraced INR: {case['total_inr']}\nTraced USDT: {case['total_usdt']}\nNodes: {len(case['nodes'])}\n"
+    content = f"NOTICE u/s 94 BNSS 2023 & Sec 106/168 BNSS 2023\nTo: {target}\nCase: {case_id}\nTraced INR: {case['total_inr']}\nTraced USDT: {case['total_usdt']}\nNodes: {len(case['nodes'])}\n"
     add_audit(case_id, "system@cybernautics.in", "System", "GENERATE_NOTICE", f"Notice for {target}")
     return {"status": "ok", "notice": content}
 
@@ -55,10 +55,10 @@ def export_pdf(case_id: str, payload: dict = {}):
     c = canvas.Canvas(buf, pagesize=A4)
     width, height = A4
     c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, height-50, "Cybernautics Q-Netra - Financial Forensic Dossier")
+    c.drawString(50, height-50, "Cybernautics Q-Netra - Financial Forensic Dossier (Sec 106/503 BNSS)")
     c.setFont("Helvetica", 10)
     c.drawString(50, height-70, f"Case: {case_id}  |  Title: {case['title']}")
-    c.drawString(50, height-85, "Section 65B Indian Evidence Act - Electronic Evidence Certificate")
+    c.drawString(50, height-85, "Section 63 BSA 2023 - Electronic Evidence Certificate")
     y = height-110
     c.drawString(50, y, f"Total INR: {case['total_inr']:,}")
     y -= 15

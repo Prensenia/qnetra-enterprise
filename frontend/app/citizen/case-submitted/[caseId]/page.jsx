@@ -4,6 +4,8 @@ import { useParams } from 'next/navigation'
 export default function CaseSubmitted() {
   const params = useParams()
   const caseId = params.caseId
+  const script = `I am reporting cyber fraud. Case ID ${caseId}. I lost funds via UPI. Please initiate lien hold under CFCFRMS.`
+  const letter = `To: Home Bank Branch Manager\nSubject: Disputed Lien Request - Case ${caseId}\nPlease place lien on disputed amount pending investigation.`
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <h1 className="text-2xl font-bold text-emerald-400">Case Registered Successfully</h1>
@@ -20,6 +22,14 @@ export default function CaseSubmitted() {
           <li>Submit bank dispute & lien request letter to your home bank branch.</li>
           <li>Beware fake cyber recovery agents.</li>
         </ol>
+      </div>
+      <div className="bg-slate-800 border border-slate-700 rounded p-4">
+        <h2 className="font-bold mb-2">1930 Call Script</h2>
+        <pre className="text-xs text-slate-300 whitespace-pre-wrap">{script}</pre>
+      </div>
+      <div className="bg-slate-800 border border-slate-700 rounded p-4">
+        <h2 className="font-bold mb-2">Home Bank Disputed-Lien Request Letter</h2>
+        <pre className="text-xs text-slate-300 whitespace-pre-wrap">{letter}</pre>
       </div>
     </div>
   )
