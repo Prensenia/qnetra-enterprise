@@ -16,6 +16,8 @@ export default function CitizenHelpdesk() {
   const [smsText, setSmsText] = useState('')
   const [ncrpId, setNcrpId] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [stateSel, setStateSel] = useState('')
+  const [citySel, setCitySel] = useState('')
   const [ocrLoading, setOcrLoading] = useState(false)
   const bankInfo = lookupBank(form.victim_bank)
 
@@ -147,6 +149,26 @@ export default function CitizenHelpdesk() {
           {step === 2 && (
             <div className="space-y-3">
               <label className="text-xs text-slate-400">{t(lang,'bank')}</label>
+              <div className="grid grid-cols-3 gap-2">
+                <select value={stateSel} onChange={e=>{setStateSel(e.target.value);setCitySel('')}} className="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs">
+                  <option value="">Select State</option>
+                  <option>Chandigarh</option><option>Delhi</option><option>Maharashtra</option><option>Karnataka</option><option>Tamil Nadu</option><option>Telangana</option><option>West Bengal</option>
+                </select>
+                <select value={citySel} onChange={e=>setCitySel(e.target.value)} className="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs">
+                  <option value="">Select City</option>
+                  {stateSel==='Chandigarh' && <option>Chandigarh</option>}
+                  {stateSel==='Delhi' && <option>New Delhi</option>}
+                  {stateSel==='Maharashtra' && <option>Mumbai</option>}
+                  {stateSel==='Karnataka' && <option>Bengaluru</option>}
+                  {stateSel==='Tamil Nadu' && <option>Chennai</option>}
+                  {stateSel==='Telangana' && <option>Hyderabad</option>}
+                  {stateSel==='West Bengal' && <option>Kolkata</option>}
+                </select>
+                <select onChange={e=>setForm({...form, victim_bank: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs">
+                  <option value="">Select Bank</option>
+                  <option>SBI</option><option>HDFC</option><option>ICICI</option><option>Axis</option><option>PNB</option><option>Kotak</option><option>BoB</option><option>Canara</option><option>Union</option><option>IndusInd</option><option>Yes</option><option>IDFC</option>
+                </select>
+              </div>
               <input value={form.victim_bank} onChange={e=>setForm({...form, victim_bank: e.target.value})} placeholder={t(lang,'bank')} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
               <label className="text-xs text-slate-400">{t(lang,'victimUpi')}</label>
               <input value={form.victim_upi} onChange={e=>setForm({...form, victim_upi: e.target.value})} placeholder={t(lang,'victimUpi')} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
