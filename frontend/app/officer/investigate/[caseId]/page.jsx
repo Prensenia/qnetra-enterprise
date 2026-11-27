@@ -92,8 +92,8 @@ export default function InvestigatePage() {
         <button onClick={exportPdf} className="px-3 py-1 bg-panel border border-edge rounded text-sm">Export Sec 63 BSA Dossier PDF</button>
         <SearchFilterBar onFilter={handleFilter} />
       </div>
-      <div className="flex-1 grid grid-cols-12 min-h-0">
-        <aside className="col-span-3 border-r border-edge p-3 overflow-y-auto space-y-4">
+      <div className="flex-1 grid grid-cols-12 min-h-0 overflow-hidden">
+        <aside className="col-span-3 border-r border-edge p-3 overflow-y-auto min-h-0 space-y-4">
           <div>
             <input type="file" accept=".csv" onChange={e => e.target.files?.[0] && ingest(e.target.files[0])} className="text-xs" />
             {hash && <div className="text-[10px] text-emerald-400 mt-1">[✓] Hash Generated & Immutable Logged: {hash.slice(0,12)}...</div>}
@@ -110,10 +110,10 @@ export default function InvestigatePage() {
           </div>
           <AuditTrailTable caseId={caseId} />
         </aside>
-        <main className="col-span-6 relative">
+        <main className="col-span-6 relative min-h-0 overflow-hidden">
           <GraphCanvas ref={graphRef} nodes={nodes} edges={edges} onNodeSelect={setSelected} />
         </main>
-        <aside className="col-span-3 border-l border-edge p-3 overflow-y-auto space-y-4">
+        <aside className="col-span-3 border-l border-edge p-3 overflow-y-auto min-h-0 space-y-4">
           <RiskInspectorDrawer walletId={selected} />
           <DilutionCalculator />
           <TimelineOrgan edges={edges} />

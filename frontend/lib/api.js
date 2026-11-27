@@ -62,20 +62,11 @@ const LEGAL_DISCLAIMER =
 const DEMO_SHA_A = '9f2c4b1e7a83d6504b1e9f2c7a83d6504b1e9f2c7a83d6504b1e9f2c7a83d650'
 const DEMO_SHA_B = 'c4a7e19d3b8265f0c4a7e19d3b8265f0c4a7e19d3b8265f0c4a7e19d3b8265f0'
 
-function demoHops(walletId) {
-  const nodes = [...DEMO_CHAIN.nodes]
-  if (walletId && !nodes.some(n => n.id === walletId)) {
-    nodes.push({ id: walletId, type: 'CryptoWallet', label: walletId, risk_score: 70 })
-    return {
-      nodes,
-      edges: [
-        ...DEMO_CHAIN.edges,
-        { id: 'demo-e6', source: '0xMixer_Tornado_Pool', target: walletId, amount: 1200, asset: 'USDT', token: 'USDT', tx_hash: '0xabc6', timestamp: '2026-09-08T10:36:00+05:30' },
-      ],
-      source: 'demo_fallback',
-    }
-  }
-  return { nodes, edges: [...DEMO_CHAIN.edges], source: 'demo_fallback' }
+function demoHops() {
+  // The workspace may be opened with a case id (e.g. CYB-2026-089) rather than
+  // a wallet address; always render the documented demo trail instead of
+  // inventing a node for whatever id was requested.
+  return { nodes: [...DEMO_CHAIN.nodes], edges: [...DEMO_CHAIN.edges], source: 'demo_fallback' }
 }
 
 function demoRisk(walletId) {

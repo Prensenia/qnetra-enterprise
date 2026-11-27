@@ -51,18 +51,23 @@ export default function CitizenHelpdesk() {
     if (raw) {
       try {
         const d = JSON.parse(raw)
-        if (d.step) setStep(d.step)
-        if (d.form) setForm(d.form)
-        if (d.messages) setMessages(d.messages)
-        if (d.files) setFiles(d.files)
-        if (d.lang) setLang(d.lang)
-        if (d.ncrpId) setNcrpId(d.ncrpId)
-        return
+        // Only resume a draft that carries real user input; the default form
+        // persisted during the first mount must not mask the demo preset.
+        const hasContent = Boolean(d?.form?.narrative) || Boolean(d?.form?.utrs?.[0]) || Number(d?.step || 1) > 1
+        if (hasContent) {
+          if (d.step) setStep(d.step)
+          if (d.form) setForm(d.form)
+          if (d.messages) setMessages(d.messages)
+          if (d.files) setFiles(d.files)
+          if (d.lang) setLang(d.lang)
+          if (d.ncrpId) setNcrpId(d.ncrpId)
+          return
+        }
       } catch {}
     }
     if (isDemo) {
       setForm({ ...DEMO_FORM })
-      setNcrpId('20811260048912')
+      setNcrpId('30811260048912')
       setMessages([
         { role: 'assistant', text: 'Namaste! I am Q-Sahayak. Take a deep breath—you are safe, and acting right now within the Golden Hour gives us the strongest chance to freeze your money.' },
         { role: 'user', text: 'Muje bahut dar lag raha hai, maine 20 minute pehle galti se ₹2,85,000 transfer kar diye fake crypto link pe, ghar pe kya bolunga' },
@@ -90,7 +95,7 @@ export default function CitizenHelpdesk() {
 
   function loadDemo() {
     setForm({ scam_type: 'Pig-Butchering / Fake Crypto Investment', incident_time: '', narrative: 'Received WhatsApp link to a fake institutional USDT trading desk. Transferred ₹2,85,000 via HDFC UPI before realizing withdrawals were blocked and funds moved to CoinDCX.', victim_bank: 'HDFC Bank', victim_upi: 'arjun.sharma@okhdfcbank', suspect_upi: 'desk.settlement99@okicici', suspect_wallet: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE', exchange: 'CoinDCX (FIU-IND Registered)', amount_inr: '285000', utrs: ['432918475612'], time_approx: '' })
-    setNcrpId('20811260048912')
+    setNcrpId('30811260048912')
   }
 
   function parseSMS() {

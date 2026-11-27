@@ -28,7 +28,6 @@ export default function CitizenShell({ children }) {
 
   return (
     <div className={`min-h-screen bg-slate-900 text-slate-100 ${a11y ? 'a11y-boost' : ''}`}>
-      <a href="#main-content" className="skip-link">Skip to main content</a>
       <header className="bg-slate-800 border-b border-slate-700 p-4 flex justify-between items-center flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Shield className="text-emerald-400" />

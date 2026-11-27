@@ -64,6 +64,16 @@ body {
   color: #ffffff !important;
   background-color: #0b1220 !important;
 }
+/* keep validation colours visible in the boosted theme */
+.a11y-boost input.border-red-500,
+.a11y-boost select.border-red-500,
+.a11y-boost textarea.border-red-500 {
+  border-color: #ef4444 !important;
+}
+.a11y-boost input.border-emerald-500,
+.a11y-boost select.border-emerald-500 {
+  border-color: #10b981 !important;
+}
 .a11y-boost button:focus-visible,
 .a11y-boost a:focus-visible {
   outline: 3px solid #FDE047;
