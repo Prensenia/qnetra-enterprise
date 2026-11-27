@@ -19,6 +19,26 @@ def get_graph(case_id: str):
 def get_audit(case_id: str):
     return [e for e in AUDIT_LOGS if e["case_id"] == case_id]
 
+@router.get("/cases/{case_id}/audit-trail")
+def get_audit_trail(case_id: str):
+    from ..db import SessionLocal
+    from ..models import EvidenceFile, AuditLogORM
+    db = SessionLocal()
+    evidence = db.query(EvidenceFile).filter(EvidenceFile.case_id == case_id).all()
+    orm_logs = db.query(AuditLogORM).filter(AuditLogORM.case_id == case_id).all()
+    db.close()
+    entries = []
+    for e in evidence:
+        entries.append({"timestamp_ist": e.uploaded_at_ist, "actor_id": e.uploaded_by, "action": "EVIDENCE_UPLOAD", "sha256": e.server_sha256, "filename": e.filename})
+    for a in orm_logs:
+        entries.append({"timestamp_ist": a.timestamp_ist, "actor_id": a.actor_id, "action": a.action, "sha256": a.target_hash_or_id, "ip": a.client_ip})
+    # also legacy audit logs
+    for a in AUDIT_LOGS:
+        if a["case_id"] == case_id:
+            entries.append({"timestamp_ist": a["timestamp_utc"], "actor_id": a["user_email"], "action": a["action"], "sha256": a["payload_sha256"]})
+    entries.sort(key=lambda x: x.get("timestamp_ist", ""))
+    return {"case_id": case_id, "entries": entries}
+
 @router.get("/cases/{case_id}/correlations")
 def correlations(case_id: str):
     case = CASES.get(case_id)

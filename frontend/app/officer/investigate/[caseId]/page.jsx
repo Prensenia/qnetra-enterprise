@@ -91,7 +91,7 @@ export default function InvestigatePage() {
               </div>
             )}
           </div>
-          <AuditTrailTable logs={[]} />
+          <AuditTrailTable caseId={caseId} />
         </aside>
         <main className="col-span-6 relative">
           <GraphCanvas ref={graphRef} nodes={nodes} edges={edges} onNodeSelect={setSelected} />

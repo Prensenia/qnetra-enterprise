@@ -51,6 +51,10 @@ export async function downloadSec63Dossier(payload, isDemoMode) {
   return { blob, filename: 'dossier.pdf' }
 }
 
+export async function fetchCaseAuditTrail(caseId) {
+  return api(`/api/cases/${caseId}/audit-trail`)
+}
+
 export async function apiUpload(path, formData) {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), 2500)
