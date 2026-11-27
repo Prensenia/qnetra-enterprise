@@ -88,7 +88,19 @@ def sec63_pdf(req: Sec63Request, x_demo_mode: str = Header(None)):
     c2.setFont("Helvetica", 10)
     c2.drawString(50, h-70, f"Case ID: {req.case_id} | FIR/NCRP: {req.fir_ncrp}")
     c2.drawString(50, h-85, f"Target Wallet: {req.target_wallet} | Timestamp: {ts}")
-    c2.drawString(50, h-100, "Section 63 BSA 2023 Electronic Evidence Certificate")
+    c2.drawString(50, h-100, "Section 63(4) BSA 2023 - PART A (IO Declaration)")
+    y2 = h-115
+    c2.drawString(50, y2, "System operation regularity declaration. Device/server localization: AWS ap-south-1 / Mumbai.")
+    y2 -= 15
+    c2.drawString(50, y2, "IO Digital Signature Certificate (DSC): ____________________")
+    y2 -= 20
+    c2.drawString(50, y2, "PART B (Digital Forensics Examiner)")
+    y2 -= 15
+    c2.drawString(50, y2, "Cryptographic hash algorithm: SHA-256. Ingested file hash table reference included.")
+    y2 -= 15
+    c2.drawString(50, y2, f"Compiled PDF SHA-256: {pdf_hash}")
+    y2 -= 15
+    c2.drawString(50, y2, "DSC stamp block: ____________________")
     y2 = h-120
     c2.drawString(50, y2, "Ingested Files:")
     y2 -= 15

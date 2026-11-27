@@ -1,46 +1,75 @@
 import { useState } from 'react'
 import Papa from 'papaparse'
 
+const INDIAN_BANKS = ['SBI', 'HDFC', 'ICICI', 'AXIS', 'PNB', 'KOTAK', 'BOB', 'CANARA', 'UNION', 'INDUSIND', 'YES', 'IDFC', 'PAYTM', 'AIRTEL', 'INDIAPOST']
+
 export function useFileIngest() {
   const [hash, setHash] = useState('')
   const [rows, setRows] = useState([])
   const [mapped, setMapped] = useState([])
+  const [verifyStatus, setVerifyStatus] = useState('')
+  const [headerIndex, setHeaderIndex] = useState(0)
+
+  function detectHeaderIndex(lines) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].toLowerCase()
+      if (line.includes('source_id') || line.includes('source') || line.includes('target_id') || line.includes('target') || line.includes('amount') || line.includes('asset') || line.includes('timestamp') || line.includes('utr') || line.includes('rrn')) {
+        return i
+      }
+    }
+    return 0
+  }
+
+  function normalizeBankName(raw) {
+    if (!raw) return ''
+    const upper = String(raw).toUpperCase()
+    for (const b of INDIAN_BANKS) {
+      if (upper.includes(b)) return b
+    }
+    return raw
+  }
 
   function mapRowsToUnifiedSchema({ utrCol, amountCol, timeCol, bankName }) {
     return rows.map(r => ({
       utr: r[utrCol] || '',
       amount: r[amountCol] || '',
       timestamp: r[timeCol] || '',
-      bank_name: bankName || r.bank_name || r.Bank || r.bank || '',
+      bank_name: bankName || normalizeBankName(r.bank_name || r.Bank || r.bank || r.source_bank || ''),
     }))
+  }
+
+  function normalizeToIST(value) {
+    if (!value) return ''
+    try {
+      const d = new Date(value)
+      if (isNaN(d.getTime())) return value
+      return d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+    } catch {
+      return value
+    }
   }
 
   async function ingest(file) {
     const buf = await file.arrayBuffer()
     const hashBuf = await window.crypto.subtle.digest('SHA-256', buf)
-    const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('')
+    const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
     setHash(hashHex)
     const text = await file.text()
     const lines = text.split(/\r?\n/)
-    let headerIndex = 0
-    for (let i = 0; i < lines.length; i++) {
-      if (/source_id|source|target_id|target|amount|asset|timestamp|utr/i.test(lines[i])) {
-        headerIndex = i
-        break
-      }
-    }
-    const csvText = lines.slice(headerIndex).join('\n')
+    const hi = detectHeaderIndex(lines)
+    setHeaderIndex(hi)
+    const csvText = lines.slice(hi).join('\n')
     const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true })
     const data = parsed.data || []
     setRows(data)
     const norm = data.map(r => ({
       utr: r.utr || r.UTR || r.RRN || r.transaction_id || r.utr_number || '',
       amount: r.amount || r.Amount || r.debit || r.value || '',
-      timestamp: r.timestamp || r.Timestamp || r.date || r.txn_date || '',
-      bank_name: r.bank_name || r.Bank || r.bank || r.source_bank || '',
+      timestamp: normalizeToIST(r.timestamp || r.Timestamp || r.date || r.txn_date || ''),
+      bank_name: normalizeBankName(r.bank_name || r.Bank || r.bank || r.source_bank || ''),
     }))
     setMapped(norm)
-    return { hash: hashHex, rows: data, mapped: norm }
+    return { hash: hashHex, rows: data, mapped: norm, headerIndex: hi }
   }
 
   async function verifyHash(caseId, file) {
@@ -48,12 +77,16 @@ export function useFileIngest() {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('client_sha256', h)
-    // use global fetch; apiUpload not imported here
     const token = typeof window !== 'undefined' ? localStorage.getItem('qnetra_token') : null
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/citizen/cases/${caseId}/evidence`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd })
-    if (!res.ok) throw new Error('TAMPER_DETECTED')
-    return res.json()
+    if (!res.ok) {
+      setVerifyStatus('TAMPER_DETECTED')
+      throw new Error('TAMPER_DETECTED')
+    }
+    const data = await res.json()
+    setVerifyStatus('VERIFIED')
+    return data
   }
 
-  return { hash, rows, mapped, ingest, mapRowsToUnifiedSchema, verifyHash }
+  return { hash, rows, mapped, ingest, mapRowsToUnifiedSchema, verifyHash, verifyStatus, headerIndex, normalizeBankName, normalizeToIST }
 }

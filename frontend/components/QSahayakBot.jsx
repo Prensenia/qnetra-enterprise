@@ -148,9 +148,9 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode, in
           <select value={lang} onChange={e=>setLang(e.target.value)} className="bg-slate-900 border border-slate-700 rounded text-xs px-2 py-1">
             {LANGS.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
           </select>
-          <button onClick={() => setVoiceMode(v => !v)} className="px-2 py-1 text-xs border border-slate-600 rounded">{voiceMode ? <VolumeX size={14}/> : <Volume2 size={14}/>}</button>
-          <button onClick={toggleMic} className={`px-2 py-1 text-xs border rounded ${listening ? 'bg-red-600 text-white animate-pulse' : 'border-slate-600'}`}>{listening ? <MicOff size={14}/> : <Mic size={14}/>}</button>
-          <button onClick={() => fileRef.current?.click()} className="px-2 py-1 text-xs border border-slate-600 rounded flex items-center gap-1"><Paperclip size={14}/> Add File</button>
+          <button onClick={() => setVoiceMode(v => !v)} aria-label="Toggle voice readout" aria-pressed={voiceMode} className="px-2 py-1 text-xs border border-slate-600 rounded">{voiceMode ? <VolumeX size={14}/> : <Volume2 size={14}/>}</button>
+          <button onClick={toggleMic} aria-label="Toggle microphone" aria-pressed={listening} className={`px-2 py-1 text-xs border rounded ${listening ? 'bg-red-600 text-white animate-pulse' : 'border-slate-600'}`}>{listening ? <MicOff size={14}/> : <Mic size={14}/>}</button>
+          <button onClick={() => fileRef.current?.click()} aria-label="Add file" className="px-2 py-1 text-xs border border-slate-600 rounded flex items-center gap-1"><Paperclip size={14}/> Add File</button>
           <input ref={fileRef} type="file" multiple className="hidden" onChange={handleFiles} />
         </div>
       </div>
@@ -167,7 +167,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode, in
             {m.role === 'assistant' && <Bot size={14} className="text-cyan mt-0.5 shrink-0" />}
             <div className="flex-1">
               {m.text}
-              {m.role === 'assistant' && <button onClick={() => speak(m.text)} className="ml-2 text-xs text-emerald-300"><Volume2 size={12}/></button>}
+              {m.role === 'assistant' && <button onClick={() => speak(m.text)} aria-label="Read message aloud" className="ml-2 text-xs text-emerald-300"><Volume2 size={12}/></button>}
             </div>
           </div>
         ))}
