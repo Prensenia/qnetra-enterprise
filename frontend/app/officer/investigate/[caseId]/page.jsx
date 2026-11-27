@@ -6,13 +6,13 @@ import { toast } from 'sonner'
 import { Play, Pause, SkipForward, SkipBack } from 'lucide-react'
 
 const NODE_STYLE = {
-  BankAccount: { shape: 'round-rectangle', color: '#5b8dd6' },
-  UPI: { shape: 'hexagon', color: '#4a9d8e' },
-  VASPExchange: { shape: 'diamond', color: '#A855F7' },
-  CryptoWallet: { shape: 'ellipse', color: '#06B6D4' },
+  BankAccount: { shape: 'round-rectangle', color: '#10B981' },
+  UPI: { shape: 'diamond', color: '#F59E0B' },
+  VASPExchange: { shape: 'hexagon', color: '#06B6D4' },
+  CryptoWallet: { shape: 'octagon', color: '#EF4444' },
   Mixer: { shape: 'triangle', color: '#F59E0B' },
-  SanctionedCluster: { shape: 'octagon', color: '#F43F5E' },
-  KYCEntity: { shape: 'rectangle', color: '#6b6579' },
+  SanctionedCluster: { shape: 'octagon', color: '#EF4444' },
+  KYCEntity: { shape: 'rectangle', color: '#6366F1' },
 }
 
 export default function InvestigatePage() {
@@ -35,14 +35,17 @@ export default function InvestigatePage() {
   const [tab, setTab] = useState('entity')
   const [notes, setNotes] = useState('')
   const [notice, setNotice] = useState('')
-  const isAuditor = typeof window !== 'undefined' && localStorage.getItem('qnetra_role') === 'Auditor'
+  const [viewMode, setViewMode] = useState('graph')
+  const [hopIndex, setHopIndex] = useState(0)
 
   useEffect(() => {
     api(`/api/v1/cases/${caseId}/graph`).then(g => {
-      setGraph(g)
-      const ts = [...new Set(g.edges.map(e => e.timestamp).filter(Boolean))].sort()
+      const edges = (g.edges || []).map((e, i) => ({ ...e, hop: i + 1, utr: e.id }))
+      setGraph({ ...g, edges })
+      const ts = [...new Set(edges.map(e => e.timestamp).filter(Boolean))].sort()
       setTimes(ts)
       setTimeIndex(ts.length)
+      setHopIndex(edges.length)
     }).catch(()=>{})
     api(`/api/v1/cases/${caseId}/audit`).then(setAudit).catch(()=>{})
     api(`/api/v1/cases/${caseId}/correlations`).then(r => setCorrelations(r.correlations || [])).catch(()=>{})
@@ -55,14 +58,14 @@ export default function InvestigatePage() {
       const cytoscape = mod.default
       const elements = [
         ...graph.nodes.map(n => ({ data: { id: n.id, label: n.label, type: n.type, risk: n.risk_score, meta: n.metadata || {} } })),
-        ...graph.edges.map(e => ({ data: { id: e.id, source: e.source, target: e.target, amount: e.amount, asset: e.asset, type: e.type, ts: e.timestamp, evidence: e.evidence_type } })),
+        ...graph.edges.map(e => ({ data: { id: e.id, source: e.source, target: e.target, amount: e.amount, asset: e.asset, type: e.type, ts: e.timestamp, evidence: e.evidence_type, hop: e.hop, utr: e.utr } })),
       ]
       cy = cytoscape({
         container: boxRef.current,
         elements,
         style: [
-          { selector: 'node', style: { 'background-color': (n) => (NODE_STYLE[n.data('type')]?.color || '#6b6579'), shape: (n) => (NODE_STYLE[n.data('type')]?.shape || 'ellipse'), width: (n) => 20 + (n.data('risk')||0)/5, height: (n) => 20 + (n.data('risk')||0)/5, label: 'data(label)', color: '#e2e8f0', 'font-size': 9, 'text-valign': 'bottom', 'text-margin-y': 4 } },
-          { selector: 'edge', style: { 'line-color': (e) => e.data('evidence') === 'inferred' ? '#F59E0B' : '#475569', 'target-arrow-shape': 'triangle', 'target-arrow-color': (e) => e.data('evidence') === 'inferred' ? '#F59E0B' : '#475569', width: 2, label: (e) => `${e.data('amount').toLocaleString()} ${e.data('asset')}`, 'font-size': 8, color: '#94a3b8', 'curve-style': 'bezier', 'text-rotation': 'autorotate' } },
+          { selector: 'node', style: { 'background-color': (n) => (NODE_STYLE[n.data('type')]?.color || '#6b6579'), shape: (n) => (NODE_STYLE[n.data('type')]?.shape || 'ellipse'), width: (n) => 22 + (n.data('risk')||0)/5, height: (n) => 22 + (n.data('risk')||0)/5, label: 'data(label)', color: '#e2e8f0', 'font-size': 9, 'text-valign': 'bottom', 'text-margin-y': 4, 'border-width': 2, 'border-color': '#1E293B' } },
+          { selector: 'edge', style: { 'line-color': (e) => e.data('evidence') === 'inferred' ? '#F59E0B' : '#475569', 'target-arrow-shape': 'triangle', 'target-arrow-color': (e) => e.data('evidence') === 'inferred' ? '#F59E0B' : '#475569', width: 2, label: (e) => `₹${e.data('amount').toLocaleString()} • UTR ${String(e.data('utr')).slice(-6)} • +${e.data('hop')}m`, 'font-size': 8, color: '#94a3b8', 'curve-style': 'bezier', 'text-rotation': 'autorotate' } },
           { selector: 'node:selected', style: { 'border-width': 3, 'border-color': '#06B6D4' } },
           { selector: 'edge:selected', style: { 'line-color': '#06B6D4', 'target-arrow-color': '#06B6D4', width: 3 } },
         ],
@@ -73,11 +76,10 @@ export default function InvestigatePage() {
       cy.on('tap', 'edge', evt => setSelected({ type: 'edge', data: evt.target.data() }))
       cy.on('tap', evt => { if (evt.target === cy) setSelected(null) })
       cyRef.current = cy
-      applyFilters(cy, threshold, collapsed, times, timeIndex)
+      applyFilters(cy, threshold, collapsed, times, timeIndex, hopIndex)
       setTimeout(() => {
         try {
-          cy.resize()
-          cy.fit(undefined, 30)
+          cy.resize(); cy.fit(undefined, 30)
           const highest = cy.nodes().max(n => n.data('risk') || 0)
           if (highest && !highest.empty()) {
             cy.$(':selected').unselect()
@@ -90,13 +92,14 @@ export default function InvestigatePage() {
     return () => { if (cy) cy.destroy() }
   }, [graph])
 
-  function applyFilters(cy, thr, col, ts, ti) {
+  function applyFilters(cy, thr, col, ts, ti, hi) {
     if (!cy) return
     cy.edges().forEach(e => {
       const amt = e.data('amount') || 0
       const visibleByThreshold = amt >= thr
       const visibleByTime = ts.length === 0 || ti >= ts.length || !e.data('ts') || ts.indexOf(e.data('ts')) <= ti
-      e.style('display', visibleByThreshold && visibleByTime ? 'element' : 'none')
+      const visibleByHop = hi === 0 || (e.data('hop') || 0) <= hi
+      e.style('display', visibleByThreshold && visibleByTime && visibleByHop ? 'element' : 'none')
     })
     cy.nodes().forEach(n => {
       if (col && n.data('type') === 'UPI') n.style('display', 'none')
@@ -112,7 +115,7 @@ export default function InvestigatePage() {
     }
   }
 
-  useEffect(() => { applyFilters(cyRef.current, threshold, collapsed, times, timeIndex) }, [threshold, collapsed, timeIndex, times])
+  useEffect(() => { applyFilters(cyRef.current, threshold, collapsed, times, timeIndex, hopIndex) }, [threshold, collapsed, timeIndex, times, hopIndex])
 
   function changeLayout(name) {
     setLayout(name)
@@ -167,33 +170,16 @@ export default function InvestigatePage() {
       const cy = cyRef.current
       const png = cy ? cy.png({ full: true, bg: '#060913' }) : null
       const base64 = png ? png.split(',')[1] : null
-      try {
-        const controller = new AbortController()
-        const id = setTimeout(() => controller.abort(), 2500)
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/cases/${caseId}/export-pdf`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(localStorage.getItem('qnetra_token') ? { Authorization: `Bearer ${localStorage.getItem('qnetra_token')}` } : {}) },
-          body: JSON.stringify({ graph_png: base64 }),
-          signal: controller.signal,
-        })
-        clearTimeout(id)
-        if (!res.ok) throw new Error('fail')
-        const blob = await res.blob()
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url; a.download = `${caseId}_dossier.pdf`; a.click()
-        URL.revokeObjectURL(url)
-      } catch {
-        const res = await (await import('../../../../lib/mockEngine')).mockHandle(`/api/v1/cases/${caseId}/export-pdf`, { method: 'POST', body: JSON.stringify({ graph_png: base64 }) })
-        if (res.pdf_base64) {
-          const bytes = Uint8Array.from(atob(res.pdf_base64), c => c.charCodeAt(0))
-          const blob = new Blob([bytes], { type: 'application/pdf' })
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url; a.download = res.filename || `${caseId}_dossier.pdf`; a.click()
-          URL.revokeObjectURL(url)
-        } else toast.error('PDF generation failed')
-      }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/cases/${caseId}/export-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(localStorage.getItem('qnetra_token') ? { Authorization: `Bearer ${localStorage.getItem('qnetra_token')}` } : {}) },
+        body: JSON.stringify({ graph_png: base64 }),
+      })
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `${caseId}_dossier.pdf`; a.click()
+      URL.revokeObjectURL(url)
       toast.success('PDF downloaded')
     } catch { toast.error('Export failed') }
   }
@@ -223,7 +209,6 @@ export default function InvestigatePage() {
     <div className="h-screen flex flex-col">
       <div className="p-3 border-b border-edge flex gap-2 items-center flex-wrap">
         <h1 className="text-lg font-bold text-cyan">Investigation: {caseId}</h1>
-      {isAuditor && <span className="px-2 py-1 text-xs border border-amber-600 rounded text-amber-300">Read-Only Compliance Auditor Mode — BSA Sec 63 Verification</span>}
         <button onClick={runAnalyze} className="px-3 py-1 bg-panel border border-edge rounded text-sm">Analyze</button>
         <button onClick={exportPdf} className="px-3 py-1 bg-panel border border-edge rounded text-sm">Export PDF</button>
         <button onClick={isolatePath} className="px-3 py-1 bg-panel border border-edge rounded text-sm">Isolate Shortest Path</button>
@@ -237,6 +222,10 @@ export default function InvestigatePage() {
         <div className="flex items-center gap-2 ml-2">
           <span className="text-xs text-slate-400">Threshold:</span>
           <input type="range" min="0" max="10000000" value={threshold} onChange={e=>setThreshold(Number(e.target.value))} className="w-32" />
+        </div>
+        <div className="flex gap-1 ml-2">
+          <button onClick={() => setViewMode('graph')} className={`px-2 py-1 text-xs border rounded ${viewMode==='graph' ? 'bg-cyan/20 border-cyan text-cyan' : 'border-edge'}`}>Interactive Network Graph</button>
+          <button onClick={() => setViewMode('allocation')} className={`px-2 py-1 text-xs border rounded ${viewMode==='allocation' ? 'bg-cyan/20 border-cyan text-cyan' : 'border-edge'}`}>Fund-Split & Lien Allocation View</button>
         </div>
       </div>
 
@@ -257,7 +246,38 @@ export default function InvestigatePage() {
           </div>
         </aside>
         <main className="col-span-6 relative flex flex-col">
-          <div ref={boxRef} className="flex-1 min-h-0" />
+          {viewMode === 'graph' ? (
+            <>
+              <div className="flex items-center gap-2 p-2 border-b border-edge">
+                <button onClick={() => setPlaying(p => !p)} className="px-2 py-1 border border-edge rounded text-xs">{playing ? <Pause size={12}/> : <Play size={12}/>}</button>
+                <button onClick={() => setHopIndex(i => Math.max(0, i-1))} className="px-2 py-1 border border-edge rounded text-xs"><SkipBack size={12}/></button>
+                <button onClick={() => setHopIndex(i => Math.min(graph?.edges?.length || 0, i+1))} className="px-2 py-1 border border-edge rounded text-xs"><SkipForward size={12}/></button>
+                <select value={speed} onChange={e=>setSpeed(Number(e.target.value))} className="bg-obsidian border border-edge rounded text-xs px-1">
+                  <option value={1}>1x</option>
+                  <option value={2}>2x</option>
+                </select>
+                <span className="text-xs text-slate-400 ml-2">Hop: {hopIndex}/{graph?.edges?.length || 0}</span>
+              </div>
+              <div ref={boxRef} className="flex-1 min-h-0" />
+            </>
+          ) : (
+            <div className="p-4 overflow-y-auto">
+              <h2 className="text-sm font-bold mb-3">Fund-Split & Freeze Allocation</h2>
+              <table className="w-full text-xs">
+                <thead><tr className="text-slate-400"><th className="text-left py-1">Node</th><th className="text-left">Type</th><th className="text-left">Amount</th><th className="text-left">Status</th></tr></thead>
+                <tbody>
+                  {(graph?.nodes || []).map(n => (
+                    <tr key={n.id} className="border-t border-edge">
+                      <td className="py-1">{n.label || n.id}</td>
+                      <td>{n.type}</td>
+                      <td>{n.amount_inr ? `₹${n.amount_inr}` : n.amount_usdt ? `$${n.amount_usdt}` : '-'}</td>
+                      <td>{n.type === 'CryptoWallet' || n.type === 'SanctionedCluster' ? 'Frozen On-Chain' : 'Lien Placed'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <div className="border-t border-edge p-3 bg-panel/80">
             <div className="flex items-center gap-2 mb-2">
               <button onClick={() => setPlaying(p => !p)} className="px-2 py-1 border border-edge rounded text-xs">{playing ? <Pause size={12}/> : <Play size={12}/>}</button>
@@ -285,6 +305,7 @@ export default function InvestigatePage() {
                   <div className="text-xs text-slate-400">Type: {nodeData.type}</div>
                   <div className="text-xs">Risk: {nodeData.risk}/100</div>
                   <div className="h-2 bg-obsidian rounded"><div className="h-2 bg-critical rounded" style={{width: `${nodeData.risk}%`}} /></div>
+                  <div className="text-xs text-slate-400 mt-2">MHA SOP 2026: {nodeData.type === 'CryptoWallet' || nodeData.type === 'SanctionedCluster' ? 'Primary Mule' : 'Lien-Only Protection'}</div>
                   <div className="text-xs text-slate-400 mt-2">Attribution:</div>
                   <div className="text-[10px] text-slate-400 bg-obsidian p-2 rounded space-y-1">
                     {Object.entries(nodeData.meta || {}).map(([k,v]) => (

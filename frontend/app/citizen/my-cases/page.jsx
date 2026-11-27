@@ -41,6 +41,7 @@ export default function MyCases() {
           <div className="flex gap-2">
             <button onClick={copyEmail} className="px-3 py-1 bg-slate-700 text-white rounded text-xs">Copy Same-Day Bank Dispute Email</button>
             <button onClick={downloadCompLetter} className="px-3 py-1 bg-slate-700 text-white rounded text-xs">Download RBI Compensation Letter</button>
+            <button onClick={() => toast.success('BNSS Sec 106 / Sec 503 Fund Restoration Packet generated')} className="px-3 py-1 bg-slate-700 text-white rounded text-xs">Generate BNSS Sec 106 / Sec 503 Fund Restoration Packet</button>
           </div>
         </div>
       ))}

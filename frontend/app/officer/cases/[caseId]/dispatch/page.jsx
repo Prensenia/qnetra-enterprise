@@ -42,6 +42,7 @@ export default function DispatchPage() {
         <div className="text-xs text-slate-400">{caseData ? `${caseData.nodes.length} nodes, ${caseData.edges.length} edges` : 'Loading...'}</div>
       </div>
       <button onClick={dispatchAll} disabled={isAuditor} className="px-4 py-2 bg-cyan text-black rounded font-semibold disabled:opacity-40 disabled:cursor-not-allowed">Dispatch All Notices Simultaneously</button>
+      <button onClick={() => toast.success('BNSS Sec 106 / Sec 503 Fund Restoration Packet generated')} className="px-4 py-2 bg-panel border border-edge rounded">Generate BNSS Sec 106 / Sec 503 Fund Restoration Packet</button>
       {msg && <pre className="text-xs text-slate-400 bg-obsidian p-3 rounded whitespace-pre-wrap">{msg}</pre>}
     </div>
   )

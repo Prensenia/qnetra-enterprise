@@ -8,6 +8,11 @@ import { Shield, Lock, User } from 'lucide-react'
 export default function LoginPage() {
   const router = useRouter()
   const [briefOpen, setBriefOpen] = useState(false)
+  const [districts, setDistricts] = useState(5)
+  const [vasps, setVasps] = useState(10)
+  const arr = districts * 500000 + vasps * 200000
+  const timeSaved = districts * 120
+  const fundsProtected = districts * 10000000
   const [portal, setPortal] = useState('citizen') // citizen | officer
   const [mode, setMode] = useState('login') // login | register
   const [email, setEmail] = useState('victim.demo@citizen.in')
@@ -135,10 +140,20 @@ export default function LoginPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setBriefOpen(false)}>
           <div className="bg-panel border border-edge rounded-xl p-6 max-w-2xl w-full mx-4" onClick={e=>e.stopPropagation()}>
             <h2 className="text-lg font-bold text-cyan mb-3">VBYLD 2027 Policy & Revenue Brief</h2>
-            <div className="text-sm text-slate-300 space-y-2">
+            <div className="text-sm text-slate-300 space-y-3">
               <p><strong>NCRP–CFCFRMS Integration:</strong> Q-Netra bridges Layer-1 bank holds with FIU-IND VASP freezes under Section 94 read with Section 168 & Section 106 BNSS, 2023 and BSA Section 63.</p>
               <p><strong>National Impact:</strong> Cuts IO notice drafting from 4 hrs to 45 sec, supports 6 Indian languages + voice accessibility for Divyangjan/elderly, streamlines BNSS Sec 106 / Sec 503 victim fund restoration.</p>
               <p><strong>B2G + B2B RegTech Model:</strong> State Cyber Cell SaaS + FIU-IND VASP Compliance Webhook API + Bank Mule-Velocity API (₹0 free citizen access).</p>
+              <div className="border border-edge rounded p-3 space-y-2">
+                <div className="text-xs font-bold text-cyan">B2G + B2B SaaS Revenue & Golden-Hour Recovery Simulator</div>
+                <label className="text-xs">Onboarded Police Districts: {districts}</label>
+                <input type="range" min="1" max="50" value={districts} onChange={e=>setDistricts(Number(e.target.value))} className="w-full" />
+                <label className="text-xs">FIU-IND VASPs: {vasps}</label>
+                <input type="range" min="1" max="30" value={vasps} onChange={e=>setVasps(Number(e.target.value))} className="w-full" />
+                <div className="text-xs">ARR: ₹{arr.toLocaleString()}</div>
+                <div className="text-xs">IO Time Saved: {timeSaved} hrs/month</div>
+                <div className="text-xs">Funds Protected: ₹{fundsProtected.toLocaleString()}</div>
+              </div>
             </div>
             <button onClick={() => setBriefOpen(false)} className="mt-4 px-3 py-2 bg-cyan text-black rounded">Close</button>
           </div>

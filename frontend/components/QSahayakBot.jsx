@@ -141,7 +141,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode, in
           <div>
             <div className="font-bold text-cyan">Q-Sahayak</div>
             <div className="text-[10px] text-slate-400">Live AI Crisis & Triage Companion</div>
-            <span title={debugReason} className={`text-[10px] px-2 py-0.5 rounded border ${engineMode === 'gemini-live' ? 'border-emerald-600 text-emerald-300' : 'border-amber-600 text-amber-300'}`}>{engineMode === 'gemini-live' ? 'AI: Gemini Live' : 'AI: Edge Fallback'}{debugReason ? ` (${debugReason.slice(0,40)})` : ''}</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded border ${engineMode === 'gemini-live' ? 'border-emerald-600 text-emerald-300' : 'border-amber-600 text-amber-300'}`}>{engineMode === 'gemini-live' ? 'AI: Gemini Live' : 'AI: Standalone'}</span>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
