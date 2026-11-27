@@ -220,9 +220,9 @@ export default function CitizenHelpdesk() {
                 <option>APK / Remote Access Scam</option>
                 <option>Job / Task Scam</option>
               </select>
-              <label className="text-xs text-slate-400">{t(lang,'incidentTime')}</label>
+              <label className="text-xs text-slate-400">{t(lang,'incidentTime')} (IST UTC+5:30)</label>
               <div className="flex gap-2">
-                <input type="datetime-local" value={form.incident_time} onChange={e=>setForm({...form, incident_time: e.target.value})} className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+                <input type="datetime-local" max={new Date().toISOString().slice(0,16)} value={form.incident_time} onChange={e=>setForm({...form, incident_time: e.target.value})} className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
                 <button onClick={setNow} className="px-3 py-2 bg-slate-700 text-white rounded text-xs">Just Now</button>
                 <button onClick={() => setForm({...form, incident_time: ''})} className="px-3 py-2 bg-slate-700 text-white rounded text-xs">I Don't Know Exact Time</button>
               </div>
@@ -291,13 +291,13 @@ export default function CitizenHelpdesk() {
 
               <label className="text-xs text-slate-400">{t(lang,'utr')}</label>
               <div className="flex gap-2">
-                <input value={form.utrs[0]} onChange={e=>setForm({...form, utrs: [e.target.value]})} placeholder="e.g., 432918475612 (from bank SMS or UPI receipt)" className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+                <input value={form.utrs[0]} onChange={e=>setForm({...form, utrs: [e.target.value.replace(/\\D/g,'').slice(0,12)]})} placeholder="e.g., 432918475612 (from bank SMS or UPI receipt)" pattern="\\d{12}" className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
                 <button onClick={() => setUnknown('utrs', ['UNKNOWN_UTR_BANK_STATEMENT_PENDING'])} className="px-2 py-1 text-xs border border-slate-600 rounded">{t(lang,'dontKnow')}</button>
               </div>
               {form.utrs[0] === 'UNKNOWN_UTR_BANK_STATEMENT_PENDING' && <div className="text-xs text-emerald-300">No problem—your bank statement or SMS will have this, and officers can still trace using your bank account & timestamp.</div>}
 
               <label className="text-xs text-slate-400">{t(lang,'ncrp')}</label>
-              <input value={ncrpId} onChange={e=>setNcrpId(e.target.value)} placeholder={t(lang,'ncrp')} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+              <input value={ncrpId} onChange={e=>setNcrpId(e.target.value.replace(/\\D/g,'').slice(0,14))} placeholder={t(lang,'ncrp')} pattern="\\d{14}" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
 
               <div className="flex gap-2">
                 <button onClick={()=>setStep(1)} className="px-3 py-2 bg-slate-700 text-white rounded">{t(lang,'back')}</button>

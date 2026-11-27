@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../../../../lib/api'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
+import { useFileIngest } from '../../../../hooks/useFileIngest'
 import { Play, Pause, SkipForward, SkipBack } from 'lucide-react'
 
 const NODE_STYLE = {
@@ -12,7 +13,7 @@ const NODE_STYLE = {
   CryptoWallet: { shape: 'octagon', color: '#EF4444' },
   Mixer: { shape: 'triangle', color: '#F59E0B' },
   SanctionedCluster: { shape: 'octagon', color: '#EF4444' },
-  KYCEntity: { shape: 'rectangle', color: '#6366F1' },
+  KYCEntity: { shape: 'round-rectangle', color: '#6366F1' },
 }
 
 export default function InvestigatePage() {
@@ -35,6 +36,7 @@ export default function InvestigatePage() {
   const [tab, setTab] = useState('entity')
   const [notes, setNotes] = useState('')
   const [notice, setNotice] = useState('')
+  const { hash, mapped, ingest } = useFileIngest()
   const [viewMode, setViewMode] = useState('graph')
   const [hopIndex, setHopIndex] = useState(0)
 
@@ -233,6 +235,20 @@ export default function InvestigatePage() {
         <aside className="col-span-3 border-r border-edge p-3 overflow-y-auto">
           <h2 className="text-sm font-bold mb-2">Case / Evidence / Audit</h2>
           <div className="text-xs text-slate-400 mb-3">Nodes: {graph?.nodes?.length || 0} Edges: {graph?.edges?.length || 0}</div>
+          <div className="mb-3">
+            <input type="file" accept=".csv" onChange={e => e.target.files?.[0] && ingest(e.target.files[0])} className="text-xs" />
+            {hash && <div className="text-[10px] text-emerald-400 mt-1">[✓] Hash Generated & Immutable Logged: {hash.slice(0,12)}...</div>}
+            {mapped.length > 0 && (
+              <div className="mt-2 max-h-32 overflow-auto text-[10px]">
+                <table className="w-full">
+                  <thead><tr><th>UTR</th><th>Amount</th><th>Time</th><th>Bank</th></tr></thead>
+                  <tbody>
+                    {mapped.slice(0,5).map((r,i) => <tr key={i}><td>{r.utr}</td><td>{r.amount}</td><td>{r.timestamp}</td><td>{r.bank_name}</td></tr>)}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
           {correlations.length > 0 && (
             <div className="mb-3 p-2 border border-elevated rounded text-xs">
               <div className="font-bold text-elevated mb-1">Cross-Case Correlations</div>
