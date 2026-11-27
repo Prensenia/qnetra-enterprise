@@ -24,6 +24,33 @@ export async function api(path, options = {}) {
   return tryFetch(path, options)
 }
 
+export async function fetchWalletHops(walletId) {
+  return api(`/api/hops/${walletId}`)
+}
+export async function fetchWalletRisk(walletId) {
+  return api(`/api/risk/${walletId}`)
+}
+export async function calculateDilution(payload) {
+  return api('/api/dilution/calculate', { method: 'POST', body: JSON.stringify(payload) })
+}
+export async function uploadCitizenEvidence(caseId, formData) {
+  return apiUpload(`/api/citizen/cases/${caseId}/evidence`, formData)
+}
+export async function downloadSec63Dossier(payload, isDemoMode) {
+  if (isDemoMode) {
+    const pdf = '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
+    const blob = new Blob([pdf], { type: 'application/pdf' })
+    return { blob, filename: 'sample_dossier.pdf' }
+  }
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/report/sec63-pdf`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const blob = await res.blob()
+  return { blob, filename: 'dossier.pdf' }
+}
+
 export async function apiUpload(path, formData) {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), 2500)

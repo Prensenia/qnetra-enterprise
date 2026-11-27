@@ -24,7 +24,7 @@ export default function CitizenShell({ children }) {
           <button onClick={logout} className="text-slate-300 hover:text-white"><LogOut size={16} /></button>
         </nav>
       </header>
-      <main className="p-6">{children}</main>
+      <main id="main-content" className="p-6">{children}</main>
     </div>
   )
 }

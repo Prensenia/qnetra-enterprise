@@ -10,6 +10,31 @@ body {
   background-size: 40px 40px;
 }
 
+:focus-visible {
+  outline: 2px solid #06B6D4;
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.skip-link:focus {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  padding: 8px 12px;
+  background: #0D1322;
+  color: #06B6D4;
+  z-index: 10000;
+}
+
 .font-mono { font-family: 'JetBrains Mono', monospace; }
 
 .glass {

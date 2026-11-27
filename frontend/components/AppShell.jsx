@@ -13,7 +13,7 @@ export default function AppShell({ children }) {
       <CommandBar />
       <div className="flex flex-1 min-h-0">
         <NavRail />
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main id="main-content" className="flex-1 overflow-auto">{children}</main>
       </div>
       <Toaster theme="dark" />
     </div>

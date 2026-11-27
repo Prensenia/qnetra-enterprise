@@ -3,46 +3,77 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useFileIngest } from '../../../../hooks/useFileIngest'
+import { fetchWalletHops, fetchWalletRisk, calculateDilution, downloadSec63Dossier } from '../../../../lib/api'
 import GraphCanvas from '../../../../components/organs/GraphCanvas'
 import RiskInspectorDrawer from '../../../../components/organs/RiskInspectorDrawer'
 import DilutionCalculator from '../../../../components/organs/DilutionCalculator'
 import TimelineOrgan from '../../../../components/organs/TimelineOrgan'
 import AuditTrailTable from '../../../../components/organs/AuditTrailTable'
+import SearchFilterBar from '../../../../components/organs/SearchFilterBar'
+import AssistiveCoPilot from '../../../../components/organs/AssistiveCoPilot'
+import { useDemoMode } from '../../../../context/DemoModeContext'
 
 export default function InvestigatePage() {
   const params = useParams()
   const caseId = params.caseId
+  const { isDemoMode } = useDemoMode()
+  const graphRef = useRef(null)
   const [nodes, setNodes] = useState([])
   const [edges, setEdges] = useState([])
   const [audit, setAudit] = useState([])
   const [selected, setSelected] = useState(null)
-  const [cy, setCy] = useState(null)
+  const [risk, setRisk] = useState(null)
+  const [dilution, setDilution] = useState(null)
+  const [showCalc, setShowCalc] = useState(false)
   const { hash, mapped, ingest } = useFileIngest()
 
   useEffect(() => {
-    fetch(`/api/hops/0xA7F367e92d11b890`).then(r => r.json()).then(d => {
+    fetchWalletHops('0xA7F367e92d11b890').then(d => {
       setNodes(d.nodes || [])
       setEdges(d.edges || [])
     }).catch(() => toast.error('Hops load failed'))
     fetch(`/api/cases/${caseId}/audit`).then(r => r.json()).then(setAudit).catch(()=>{})
   }, [caseId])
 
+  useEffect(() => {
+    if (!selected) return
+    fetchWalletRisk(selected).then(setRisk).catch(()=>{})
+  }, [selected])
+
+  async function runDilution() {
+    const res = await calculateDilution({ initial_taint_ratio: 0.5, hops: [{ wallet_address: '0xA7F367e92d11b890', pre_balance: 1000, received_amount: 500 }] })
+    setDilution(res)
+  }
+
   async function exportPdf() {
-    const png = cy ? cy.png({ full: true, bg: '#060913' }) : null
-    const base64 = png ? png.split(',')[1] : null
-    const res = await fetch('/api/report/sec63-pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ case_id: caseId, target_wallet: '0xA7F367e92d11b890', graph_snapshot_base64: base64 }) })
-    const blob = await res.blob()
+    const cy = graphRef.current?.getCy ? graphRef.current.getCy() : null
+    const base64 = graphRef.current?.getSnapshotBase64 ? graphRef.current.getSnapshotBase64() : (cy ? cy.png({ full: true, scale: 1.5 }).split(',')[1] : null)
+    if (isDemoMode) {
+      const { blob, filename } = await downloadSec63Dossier({}, true)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = filename; a.click()
+      URL.revokeObjectURL(url)
+      return
+    }
+    const { blob, filename } = await downloadSec63Dossier({ case_id: caseId, target_wallet: '0xA7F367e92d11b890', graph_snapshot_base64: base64 }, false)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url; a.download = `${caseId}_dossier.pdf`; a.click()
+    a.href = url; a.download = filename; a.click()
     URL.revokeObjectURL(url)
+  }
+
+  function handleFilter(f) {
+    // client-side filter could be applied; for now just log
+    console.log('filter', f)
   }
 
   return (
     <div className="h-screen flex flex-col">
       <div className="p-3 border-b border-edge flex gap-2 items-center flex-wrap">
         <h1 className="text-lg font-bold text-cyan">Investigation: {caseId}</h1>
-        <button onClick={exportPdf} className="px-3 py-1 bg-panel border border-edge rounded text-sm">Export PDF</button>
+        <button onClick={exportPdf} className="px-3 py-1 bg-panel border border-edge rounded text-sm">Export Sec 63 BSA Dossier PDF</button>
+        <SearchFilterBar onFilter={handleFilter} />
       </div>
       <div className="flex-1 grid grid-cols-12 min-h-0">
         <aside className="col-span-3 border-r border-edge p-3 overflow-y-auto space-y-4">
@@ -60,15 +91,16 @@ export default function InvestigatePage() {
               </div>
             )}
           </div>
-          <AuditTrailTable logs={audit} />
+          <AuditTrailTable logs={[]} />
         </aside>
         <main className="col-span-6 relative">
-          <GraphCanvas nodes={nodes} edges={edges} onNodeSelect={setSelected} onCyReady={setCy} />
+          <GraphCanvas ref={graphRef} nodes={nodes} edges={edges} onNodeSelect={setSelected} />
         </main>
         <aside className="col-span-3 border-l border-edge p-3 overflow-y-auto space-y-4">
           <RiskInspectorDrawer walletId={selected} />
           <DilutionCalculator />
           <TimelineOrgan edges={edges} />
+          <AssistiveCoPilot caseId={caseId} />
         </aside>
       </div>
     </div>

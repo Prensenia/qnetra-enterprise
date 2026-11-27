@@ -17,6 +17,11 @@ export default function RootShell({ children }) {
     }
   }, [pathname, role, router])
   if (pathname === '/login' || pathname === '/register') return <>{children}</>
-  if (pathname?.startsWith('/citizen')) return <CitizenShell>{children}</CitizenShell>
-  return <AppShell>{children}</AppShell>
+  return (
+    <>
+      <a href="#main-content" className="skip-link">Skip to Main Content</a>
+      <div aria-live="polite" className="sr-only" id="aria-live-region" />
+      {pathname?.startsWith('/citizen') ? <CitizenShell>{children}</CitizenShell> : <AppShell>{children}</AppShell>}
+    </>
+  )
 }

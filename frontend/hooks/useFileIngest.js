@@ -6,6 +6,15 @@ export function useFileIngest() {
   const [rows, setRows] = useState([])
   const [mapped, setMapped] = useState([])
 
+  function mapRowsToUnifiedSchema({ utrCol, amountCol, timeCol, bankName }) {
+    return rows.map(r => ({
+      utr: r[utrCol] || '',
+      amount: r[amountCol] || '',
+      timestamp: r[timeCol] || '',
+      bank_name: bankName || r.bank_name || r.Bank || r.bank || '',
+    }))
+  }
+
   async function ingest(file) {
     const buf = await file.arrayBuffer()
     const hashBuf = await window.crypto.subtle.digest('SHA-256', buf)
@@ -13,7 +22,6 @@ export function useFileIngest() {
     setHash(hashHex)
     const text = await file.text()
     const lines = text.split(/\r?\n/)
-    // find header row
     let headerIndex = 0
     for (let i = 0; i < lines.length; i++) {
       if (/source_id|source|target_id|target|amount|asset|timestamp|utr/i.test(lines[i])) {
@@ -35,5 +43,17 @@ export function useFileIngest() {
     return { hash: hashHex, rows: data, mapped: norm }
   }
 
-  return { hash, rows, mapped, ingest }
+  async function verifyHash(caseId, file) {
+    const { hash: h } = await ingest(file)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('client_sha256', h)
+    // use global fetch; apiUpload not imported here
+    const token = typeof window !== 'undefined' ? localStorage.getItem('qnetra_token') : null
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/citizen/cases/${caseId}/evidence`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd })
+    if (!res.ok) throw new Error('TAMPER_DETECTED')
+    return res.json()
+  }
+
+  return { hash, rows, mapped, ingest, mapRowsToUnifiedSchema, verifyHash }
 }

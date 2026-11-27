@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import cytoscape from 'cytoscape'
 import coseBilkent from 'cytoscape-cose-bilkent'
 
@@ -8,17 +8,26 @@ if (typeof window !== 'undefined') {
 }
 
 const NODE_COLOR = {
-  Victim: '#10B981',
-  Bank: '#3B82F6',
-  Exchange: '#A855F7',
-  Wallet: '#EF4444',
-  Mixer: '#F59E0B',
-  Bridge: '#F97316',
+  Victim: '#10b981',
+  Bank: '#3b82f6',
+  Exchange: '#8b5cf6',
+  Mixer: '#ef4444',
+  Bridge: '#f97316',
 }
 
-export default function GraphCanvas({ nodes, edges, onNodeSelect, onCyReady }) {
+const GraphCanvas = forwardRef(function GraphCanvas({ nodes, edges, onNodeSelect }, ref) {
   const boxRef = useRef(null)
   const cyRef = useRef(null)
+
+  useImperativeHandle(ref, () => ({
+    getSnapshotBase64: () => {
+      const cy = cyRef.current
+      if (!cy) return null
+      const png = cy.png({ full: true, scale: 1.5 })
+      return png.split(',')[1]
+    },
+    getCy: () => cyRef.current,
+  }))
 
   useEffect(() => {
     if (!boxRef.current) return
@@ -28,7 +37,7 @@ export default function GraphCanvas({ nodes, edges, onNodeSelect, onCyReady }) {
       try { cytoscape.use(coseBilkent) } catch (e) {}
       const elements = [
         ...nodes.map(n => ({ data: { id: n.id, label: n.label || n.id, type: n.type, risk: n.risk_score || 0 } })),
-        ...edges.map(e => ({ data: { id: e.id, source: e.source, target: e.target, label: `${e.amount} ${e.asset}`, amount: e.amount, asset: e.asset, utr: e.id } })),
+        ...edges.map(e => ({ data: { id: e.id, source: e.source, target: e.target, label: `${e.amount} ${e.asset}`, amount: e.amount, asset: e.asset } })),
       ]
       cy = cytoscape({
         container: boxRef.current,
@@ -51,11 +60,12 @@ export default function GraphCanvas({ nodes, edges, onNodeSelect, onCyReady }) {
         } catch {}
       })
       cyRef.current = cy
-      if (onCyReady) onCyReady(cy)
       setTimeout(() => { cy.resize(); cy.fit(undefined, 30) }, 300)
     })
     return () => { if (cy) cy.destroy() }
   }, [nodes, edges])
 
   return <div ref={boxRef} className="w-full h-full min-h-[400px]" />
-}
+})
+
+export default GraphCanvas
