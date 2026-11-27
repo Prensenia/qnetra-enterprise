@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Activity, Search, LogOut, ChevronDown } from 'lucide-react'
-import { api } from '../lib/api'
+import { api, fetchWalletRisk } from '../lib/api'
 
 export default function CommandBar() {
   const router = useRouter()
@@ -39,9 +39,19 @@ export default function CommandBar() {
 
   async function search(e) {
     e.preventDefault()
-    if (!query) return
-    if (query.toUpperCase().startsWith('CYB-')) router.push(`/officer/investigate/${query.toUpperCase()}`)
-    else setLookup({ id: query, risk: Math.floor(Math.random()*40)+60, type: query.startsWith('0x') || query.startsWith('T') ? 'CryptoWallet' : 'UPI', status: 'Flagged' })
+    const q = query.trim()
+    if (!q) return
+    if (q.toUpperCase().startsWith('CYB-')) return router.push(`/officer/investigate/${q.toUpperCase()}`)
+    // Same scorer the workspace uses, so a repeat lookup of one identifier cannot
+    // return a different number on stage. Offline it resolves to the seeded score.
+    const looksLikeWallet = q.startsWith('0x') || q.startsWith('T')
+    setLookup({ id: q, risk: '…', type: looksLikeWallet ? 'CryptoWallet' : 'UPI', status: 'Scoring' })
+    try {
+      const res = await fetchWalletRisk(q)
+      setLookup({ id: q, risk: res.overall_score, type: looksLikeWallet ? 'CryptoWallet' : 'UPI', status: res.risk_level })
+    } catch {
+      setLookup({ id: q, risk: '—', type: looksLikeWallet ? 'CryptoWallet' : 'UPI', status: 'Scorer unavailable' })
+    }
   }
 
   const healthy = health?.status === 'ok'
