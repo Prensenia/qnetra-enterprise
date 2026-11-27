@@ -1,11 +1,20 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { api } from '../../../lib/api'
+import { api, listDemoCases, isBackendUnreachable } from '../../../lib/api'
 import { toast } from 'sonner'
 
 export default function MyCases() {
   const [cases, setCases] = useState([])
-  useEffect(() => { api('/api/v1/citizen/cases').then(setCases).catch(()=>{}) }, [])
+  useEffect(() => {
+    // Offline demo: complaints filed without the API live on this device and
+    // must still show up here, otherwise the submit flow dead-ends.
+    api('/api/v1/citizen/cases')
+      .then(rows => setCases([...(Array.isArray(rows) ? rows : []), ...listDemoCases()]))
+      .catch(err => {
+        if (!isBackendUnreachable(err)) toast.error('Could not load cases')
+        setCases(listDemoCases())
+      })
+  }, [])
 
   function copyEmail() {
     const text = 'Subject: Cyber Fraud Dispute - Lien Request\nI am reporting cyber fraud. Please place lien on disputed amount and escalate to Principal Nodal Officer.'
@@ -30,6 +39,9 @@ export default function MyCases() {
           <div className="font-mono text-emerald-300">{c.case_id}</div>
           <div className="text-sm">{c.scam_type} - ₹{c.amount_inr}</div>
           <div className="text-xs text-slate-400">{c.description}</div>
+          {c.source === 'demo_fallback' && (
+            <div className="text-xs text-amber-300">Offline demo record — stored on this device, submitted {c.created_at_ist} IST</div>
+          )}
           {c.ncrp_id && <div className="text-xs text-slate-400">NCRP ID: {c.ncrp_id}</div>}
           <div className="text-xs font-bold text-emerald-300">RBI Zero-Liability Timeline</div>
           <ol className="list-decimal pl-5 text-xs text-slate-300 space-y-1">

@@ -289,6 +289,63 @@ export async function fetchCaseAuditTrail(caseId) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Citizen case registration fallback (Vercel / offline demo)
+// The complaint is stored on the device so the acknowledgement receipt,
+// case id and my-cases list all keep working without the FastAPI host.
+// ---------------------------------------------------------------------------
+
+const DEMO_CASES_KEY = 'qnetra_demo_cases'
+
+export function listDemoCases() {
+  if (typeof window === 'undefined') return []
+  try {
+    const rows = JSON.parse(localStorage.getItem(DEMO_CASES_KEY) || '[]')
+    return Array.isArray(rows) ? rows : []
+  } catch {
+    return []
+  }
+}
+
+function nextDemoCaseId() {
+  return `CP-CYBER-2026-${String(101 + listDemoCases().length).padStart(3, '0')}`
+}
+
+export function saveDemoCase(payload = {}, files = []) {
+  const record = {
+    case_id: payload.case_id || nextDemoCaseId(),
+    status: 'SUBMITTED',
+    scam_type: payload.scam_type || 'Cyber fraud',
+    amount_inr: Number(payload.amount_inr || 0),
+    description: payload.narrative || '',
+    ncrp_id: payload.ncrp_id || '',
+    victim_bank: payload.victim_bank || '',
+    victim_upi: payload.victim_upi || '',
+    suspect_upi: payload.suspect_upi || '',
+    suspect_wallet: payload.suspect_wallet || '',
+    exchange: payload.exchange || '',
+    utrs: payload.utrs || [],
+    evidence: files,
+    created_at_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    source: 'demo_fallback',
+    legal_disclaimer: LEGAL_DISCLAIMER,
+  }
+  const rest = listDemoCases().filter(c => c.case_id !== record.case_id)
+  localStorage.setItem(DEMO_CASES_KEY, JSON.stringify([record, ...rest].slice(0, 50)))
+  return record
+}
+
+export async function createCitizenCase(payload = {}, files = []) {
+  try {
+    const res = await api('/api/v1/citizen/cases', { method: 'POST', body: JSON.stringify(payload) })
+    return { ...res, demo: false }
+  } catch (err) {
+    if (!isBackendUnreachable(err)) throw err
+    const record = saveDemoCase(payload, files)
+    return { case_id: record.case_id, case: record, demo: true }
+  }
+}
+
 export async function apiUpload(path, formData) {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), 2500)

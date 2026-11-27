@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { api } from '../../../lib/api'
+import { createCitizenCase } from '../../../lib/api'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import QSahayakBot from '../../../components/QSahayakBot'
@@ -149,20 +149,39 @@ export default function CitizenHelpdesk() {
 
   async function submit() {
     try {
-      const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: email || 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: files.map(f=>f.name) }
-      const res = await api('/api/v1/citizen/cases', { method: 'POST', body: JSON.stringify(payload) })
-      // upload evidence files with hash verification
+      // Hash every attachment on the device first: the same digest then travels
+      // with the complaint whether it reaches FastAPI or is kept offline.
+      const evidence = []
       for (const f of fileObjects) {
-        const hashHex = await computeSha256Hex(f)
-        const fd = new FormData()
-        fd.append('file', f)
-        fd.append('client_sha256', hashHex)
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/citizen/cases/${res.case_id}/evidence`, { method: 'POST', body: fd })
+        evidence.push({ name: f.name, size: f.size, sha256: await computeSha256Hex(f) })
       }
-      toast.success('Case registered')
+      const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: email || 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: evidence.map(e => e.sha256) }
+      const res = await createCitizenCase(payload, evidence)
+
+      // Evidence upload only applies to a live case; an offline case already
+      // carries its hashes in the local record above.
+      if (!res.demo) {
+        for (let i = 0; i < fileObjects.length; i++) {
+          const fd = new FormData()
+          fd.append('file', fileObjects[i])
+          fd.append('client_sha256', evidence[i].sha256)
+          try {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/citizen/cases/${res.case_id}/evidence`, { method: 'POST', body: fd })
+          } catch {
+            toast(`Case saved, but evidence upload failed — retry from My Cases (hash ${evidence[i].sha256.slice(0, 12)}…)`)
+          }
+        }
+      }
+
+      toast.success(res.demo ? `Case registered (Demo Mode) — ${res.case_id}` : `Case registered — ${res.case_id}`)
       sessionStorage.removeItem(storageKey)
       router.push(`/citizen/case-submitted/${res.case_id}`)
-    } catch { toast.error('Submission failed') }
+    } catch (err) {
+      // Surface the server's reason (validation, auth) instead of a dead end.
+      let detail = String(err?.message || '').trim()
+      try { detail = JSON.parse(detail).detail || detail } catch {}
+      toast.error(detail && detail !== 'Submission failed' ? `Submission failed — ${String(detail).slice(0, 140)}` : 'Submission failed — backend unreachable, retry in a moment')
+    }
   }
 
   function setUnknown(field, value) {
