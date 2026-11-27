@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 APP_ENV = os.getenv("APP_ENV", "development")
+TZ = os.getenv("TZ", "Asia/Kolkata")
+AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "cybernautics-qnetra-super-secret-jwt-key-2026")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24

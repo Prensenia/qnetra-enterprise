@@ -2,10 +2,10 @@ node_modules/
 .next/
 __pycache__/
 *.pyc
+*.log
 .env
 dist/
 build/
-*.log
 .DS_Store
 Thumbs.db
 *.db

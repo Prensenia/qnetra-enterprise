@@ -1,8 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, ingest, onchain, analyze, dashboard, cases, settings, health, vasp, citizen, officer
+from .routers import auth, ingest, onchain, analyze, dashboard, cases, settings, health, vasp, citizen, officer, forensics, reporting
 
 app = FastAPI(title="Q-Netra Enterprise Suite", version="1.0.0")
+
+@app.on_event("startup")
+def startup_seed():
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        import seed_neo4j
+        seed_neo4j.main()
+    except Exception as e:
+        print("Neo4j seed skipped:", e)
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,6 +33,8 @@ app.include_router(health.router)
 app.include_router(vasp.router)
 app.include_router(citizen.router)
 app.include_router(officer.router)
+app.include_router(forensics.router)
+app.include_router(reporting.router)
 
 @app.get("/")
 def root():
