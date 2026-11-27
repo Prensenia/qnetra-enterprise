@@ -1,9 +1,27 @@
 'use client'
 import { useState } from 'react'
-import { api } from '../../lib/api'
+import { api, isBackendUnreachable } from '../../lib/api'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Shield, Lock, User } from 'lucide-react'
+
+const DEMO_ACCOUNTS = {
+  'admin@cybernautics.in': { role: 'Lead Investigator', name: 'Admin User', redirect: '/officer/dashboard' },
+  'auditor@cybernautics.in': { role: 'Auditor', name: 'Auditor User', redirect: '/officer/dashboard' },
+  'victim.demo@citizen.in': { role: 'Citizen', name: 'Demo Victim', redirect: '/citizen/helpdesk' },
+}
+
+function base64Url(obj) {
+  return btoa(JSON.stringify(obj)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')
+}
+
+// JWT-shaped demo session token: the backend is unreachable, so it is never
+// validated server-side — it only satisfies the client-side session guards.
+function demoToken(email, role) {
+  const header = base64Url({ alg: 'HS256', typ: 'JWT' })
+  const payload = base64Url({ sub: email, role, demo: true, iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 8 * 60 * 60 })
+  return `${header}.${payload}.demo-signature`
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -25,6 +43,16 @@ export default function LoginPage() {
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
 
+  function signInDemo(demo, normalizedEmail) {
+    localStorage.setItem('qnetra_token', demoToken(normalizedEmail, demo.role))
+    localStorage.setItem('qnetra_role', demo.role)
+    localStorage.setItem('qnetra_user_email', normalizedEmail)
+    localStorage.setItem('qnetra_user', JSON.stringify({ email: normalizedEmail, name: demo.name, role: demo.role }))
+    localStorage.setItem('qnetra_demo_mode', 'true')
+    toast.success('Signed in (Demo Mode)')
+    router.push(demo.redirect)
+  }
+
   async function login(e) {
     e.preventDefault()
     try {
@@ -35,7 +63,14 @@ export default function LoginPage() {
       toast.success('Signed in')
       if (res.role === 'Citizen') router.push('/citizen/helpdesk')
       else router.push('/officer/dashboard')
-    } catch {
+    } catch (err) {
+      // Vercel deployment without a reachable FastAPI host: fall back to a demo
+      // session for the three seeded accounts only.
+      const demo = DEMO_ACCOUNTS[String(email).trim().toLowerCase()]
+      if (isBackendUnreachable(err) && demo) {
+        signInDemo(demo, String(email).trim().toLowerCase())
+        return
+      }
       toast.error('Login failed')
     }
   }

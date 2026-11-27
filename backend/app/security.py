@@ -1,4 +1,4 @@
-import hashlib, os, base64
+import hashlib, hmac, os, base64
 
 ITERATIONS = 200000
 
@@ -16,7 +16,7 @@ def verify_password(stored: str, password: str) -> bool:
             salt = base64.b64decode(salt_b64)
             dk = base64.b64decode(dk_b64)
             calc = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, int(iters))
-            return hashlib.compare_digest(calc, dk)
+            return hmac.compare_digest(calc, dk)
         except Exception:
             return False
     return stored == password

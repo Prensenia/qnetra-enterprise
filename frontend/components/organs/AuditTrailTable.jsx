@@ -17,6 +17,7 @@ export default function AuditTrailTable({ caseId }) {
   const [entries, setEntries] = useState([])
   const [status, setStatus] = useState('pending') // pending | verified | mismatch | error
   const [loading, setLoading] = useState(false)
+  const [offline, setOffline] = useState(false) // backend unreachable: verified against cached hashes
 
   function applyEntries(rawEntries) {
     const checked = (rawEntries || []).map(verifyEntry)
@@ -31,10 +32,18 @@ export default function AuditTrailTable({ caseId }) {
     setStatus('pending')
     try {
       const data = await fetchCaseAuditTrail(caseId)
+      setOffline(false)
       applyEntries(data.entries)
     } catch {
-      setEntries([])
-      setStatus('error')
+      // Graceful offline verification: re-check the hashes already loaded
+      // (client_sha256 vs server_sha256) instead of failing outright.
+      setOffline(true)
+      if (entries.length > 0) {
+        applyEntries(entries)
+      } else {
+        setEntries([])
+        setStatus('error')
+      }
     } finally {
       setLoading(false)
     }
@@ -45,8 +54,8 @@ export default function AuditTrailTable({ caseId }) {
     let cancelled = false
     setLoading(true)
     fetchCaseAuditTrail(caseId)
-      .then(d => { if (!cancelled) applyEntries(d.entries) })
-      .catch(() => { if (!cancelled) setStatus('error') })
+      .then(d => { if (!cancelled) { setOffline(false); applyEntries(d.entries) } })
+      .catch(() => { if (!cancelled) { setOffline(true); setStatus('error') } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [caseId])
@@ -97,6 +106,11 @@ export default function AuditTrailTable({ caseId }) {
       <div className={`text-[10px] pt-2 border-t border-edge ${badgeClass}`}>
         Total entries: {entries.length} • Integrity: {badge}
       </div>
+      {offline && (
+        <div className="text-[10px] text-amber-400">
+          [!] Backend unreachable — verified against locally cached SHA-256 hashes (offline mode).
+        </div>
+      )}
       <div className="text-[10px] text-slate-500 mt-2">
         Every entry is SHA-256 hashed and chained to the previous entry. Any tampering breaks the chain and is immediately detectable by the Verify All Hashes button. Audit logs are immutable and append-only under BSA Section 63.
       </div>
