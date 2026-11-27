@@ -8,6 +8,7 @@ import { lookupBank } from '../../../lib/bankHelplines'
 import { t, LANGS } from '../../../lib/translations'
 import { computeSha256Hex } from '../../../hooks/useFileIngest'
 import GoldenHourBanner from '../../../components/GoldenHourBanner'
+import Narrator from '../../../components/Narrator'
 
 const DEMO_FORM = {
   scam_type: 'Pig-Butchering / Fake Crypto Investment',
@@ -224,8 +225,9 @@ export default function CitizenHelpdesk() {
         </div>
       </div>
 
+            <Narrator screen="helpdesk" lang={lang} />
       <div className="flex gap-2 text-xs">
-        {[1,2,3].map(s => (
+        {[1, 2, 3].map(s => (
           <div key={s} className={`flex-1 p-2 rounded text-center ${step===s ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
             {s===1 ? t(lang,'step1') : s===2 ? t(lang,'step2') : s===3 ? t(lang,'step3') : ''}
           </div>

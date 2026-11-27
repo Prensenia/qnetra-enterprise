@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { api, apiUpload, isBackendUnreachable, fetchWalletRisk } from '../../../lib/api'
 import DilutionCalculator from '../../../components/organs/DilutionCalculator'
+import Narrator from '../../../components/Narrator'
 import { toast } from 'sonner'
 
 const SAMPLE_CSV = `utr,amount,timestamp,bank_name,upi_id
@@ -135,6 +136,8 @@ export default function OfficerTools() {
         <h1 className="text-2xl font-bold text-cyan">Forensic Tools &amp; Batch Ingest</h1>
         <p className="text-xs text-slate-400 mt-1">Scoring, proportional dilution and evidence ingestion — the same endpoints the case workspace calls.</p>
       </div>
+
+      <Narrator screen="tools" />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
         <div className="bg-panel border border-edge rounded p-4">

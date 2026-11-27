@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { api, isBackendUnreachable } from '../../../lib/api'
 import { useRouter } from 'next/navigation'
 import AuditTrailTable from '../../../components/organs/AuditTrailTable'
+import Narrator from '../../../components/Narrator'
 import { toast } from 'sonner'
 import { Upload, Play } from 'lucide-react'
 
@@ -70,6 +71,7 @@ Offline demo mode — seeded case data. Start the FastAPI + Neo4j stack (docker 
         <h1 className="text-2xl font-bold text-cyan">Officer Command Dashboard</h1>
         <button onClick={webhook} className="px-3 py-2 bg-panel border border-edge rounded flex items-center gap-2"><Play size={14} /> Simulate Live Webhook</button>
       </div>
+      <Narrator screen="dashboard" />
       <div className="grid grid-cols-4 gap-4">
         <Kpi label="Total Registered Cases" value={summary.active_investigations} />
         <Kpi label="Traced Fiat (INR)" value={`₹${(summary.total_traced_inr/10000000).toFixed(2)} Cr`} />

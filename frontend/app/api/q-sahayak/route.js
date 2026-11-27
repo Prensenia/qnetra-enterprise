@@ -43,8 +43,11 @@ function extract(message, currentForm = {}) {
   if (utr && !currentForm.utr) out.utr = utr[0]
   if (ncrp) out.ncrp_id = ncrp[0]
   if (amount && !currentForm.amount_inr) {
-    const value = parseFloat(String(amount[1]).replace(/,/g, ''))
-    if (!Number.isNaN(value) && value > 0) out.amount_inr = value
+    const raw = String(amount[1])
+    const value = parseFloat(raw.replace(/,/g, ''))
+    // 1930 is the helpline and 1800-numbers are bank desks — never a loss amount.
+    const isHelpline = /^1800/.test(raw) || value === 1930 || value === 112 || value === 1930
+    if (!Number.isNaN(value) && value > 0 && !isHelpline) out.amount_inr = value
   }
   if (wallet && !currentForm.suspect_wallet) out.suspect_id = wallet[0]
   if (upi && !currentForm.suspect_upi) out.suspect_id = upi[0]
@@ -74,54 +77,197 @@ function isHindi(language, message) {
   return String(language || '').toLowerCase().startsWith('hi') || /[\u0900-\u097F]/.test(String(message || ''))
 }
 
+// Answers the local engine can give without a model. Every line is either a
+// helpline fact or a product fact, so a keyless deployment never invents one.
+const LOCAL = {
+  en: {
+    ask: 'First — which bank or UPI app was used, and roughly how much money went out?',
+    call1930: 'Call 1930 now. Reporting inside the Golden Hour gives the strongest chance of a bank lien hold on the money.',
+    prepare: 'Keep three things ready: the 12-digit UTR, your bank statement, and the SMS or receipt you received.',
+    bankDesk: "Also call your bank's 24x7 fraud desk — the lien is executed by the bank, not by the helpline.",
+    neverShare: 'Never share OTP, PIN or CVV with anyone, even someone claiming to be from the bank, Cyber Cell or police.',
+    next: 'Then submit this form. Q-Netra hashes the evidence and generates the Cyber Cell packet plus the notice for the bank and the exchange.',
+    unknown: 'I can only help with cyber-fraud reporting steps — the UTR, the bank, the freeze and the complaint. For case status, dial 1930.',
+  },
+  hi: {
+    ask: 'पहले बताइए — कौन सा बैंक या UPI ऐप इस्तेमाल हुआ, और लगभग कितने रुपये गए?',
+    call1930: 'अभी 1930 पर कॉल करें। गोल्डन आवर में शिकायत करने से बैंक लियन लगने की संभावना सबसे अधिक होती है।',
+    prepare: 'तीन चीज़ें तैयार रखें: 12 अंकों का UTR, बैंक स्टेटमेंट, और मिला हुआ SMS या रसीद।',
+    bankDesk: 'अपने बैंक के 24x7 फ्रॉड डेस्क को भी कॉल करें — लियन बैंक लगाता है, हेल्पलाइन नहीं।',
+    neverShare: 'OTP, PIN या CVV किसी के साथ साझा न करें — बैंक, साइबर सेल या पुलिस कहने वाले के साथ भी नहीं।',
+    next: 'इसके बाद यह फॉर्म जमा करें। क्यू-नेत्रा साक्ष्य का हैश बनाकर साइबर सेल पैकेट और बैंक/एक्सचेंज के लिए नोटिस तैयार कर देता है।',
+    unknown: 'मैं केवल साइबर धोखाधड़ी की रिपोर्टिंग में मदद कर सकता हूँ — UTR, बैंक, फ्रीज और शिकायत। केस की स्थिति के लिए 1930 पर कॉल करें।',
+  },
+  pa: {
+    ask: 'ਪਹਿਲਾਂ ਦੱਸੋ — ਕਿਹੜਾ ਬੈਂਕ ਜਾਂ UPI ਐਪ ਵਰਤਿਆ, ਅਤੇ ਲਗਭਗ ਕਿੰਨੇ ਰੁਪਏ ਗਏ?',
+    call1930: 'ਹੁਣੇ 1930 ’ਤੇ ਕਾਲ ਕਰੋ। ਗੋਲਡਨ ਆਵਰ ਵਿੱਚ ਸ਼ਿਕਾਇਤ ਕਰਨ ਨਾਲ ਬੈਂਕ ਲੀਨ ਲੱਗਣ ਦੀ ਸੰਭਾਵਨਾ ਸਭ ਤੋਂ ਵੱਧ ਹੁੰਦੀ ਹੈ।',
+    prepare: 'ਤਿੰਨ ਚੀਜ਼ਾਂ ਤਿਆਰ ਰੱਖੋ: 12 ਅੰਕਾਂ ਦਾ UTR, ਬੈਂਕ ਸਟੇਟਮੈਂਟ, ਅਤੇ ਮਿਲਿਆ SMS ਜਾਂ ਰਸੀਦ।',
+    bankDesk: 'ਆਪਣੇ ਬੈਂਕ ਦੇ 24x7 ਫਰਾਡ ਡੈਸਕ ਨੂੰ ਵੀ ਕਾਲ ਕਰੋ — ਲੀਨ ਬੈਂਕ ਲਗਾਉਂਦਾ ਹੈ।',
+    neverShare: 'OTP, PIN ਜਾਂ CVV ਕਿਸੇ ਨਾਲ ਸਾਂਝਾ ਨਾ ਕਰੋ — ਬੈਂਕ ਜਾਂ ਪੁਲਿਸ ਕਹਿਣ ਵਾਲੇ ਨਾਲ ਵੀ ਨਹੀਂ।',
+    next: 'ਫਿਰ ਇਹ ਫਾਰਮ ਜਮ੍ਹਾਂ ਕਰੋ। ਕਿਊ-ਨੇਤਰਾ ਸਬੂਤ ਦਾ ਹੈਸ਼ ਬਣਾ ਕੇ ਸਾਈਬਰ ਸੈੱਲ ਪੈਕੇਟ ਤਿਆਰ ਕਰਦਾ ਹੈ।',
+    unknown: 'ਮੈਂ ਸਿਰਫ਼ ਸਾਈਬਰ ਧੋਖਾਧੜੀ ਦੀ ਰਿਪੋਰਟਿੰਗ ਵਿੱਚ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ — UTR, ਬੈਂਕ, ਫ੍ਰੀਜ਼ ਅਤੇ ਸ਼ਿਕਾਇਤ। ਕੇਸ ਦੀ ਸਥਿਤੀ ਲਈ 1930 ’ਤੇ ਕਾਲ ਕਰੋ।',
+  },
+  ta: {
+    ask: 'முதலில் சொல்லுங்கள் — எந்த வங்கி அல்லது UPI செயலி பயன்படுத்தப்பட்டது, தோராயமாக எவ்வளவு பணம் போனது?',
+    call1930: 'இப்போதே 1930-ஐ அழைக்கவும். கோல்டன் அவரில் புகார் செய்தால் வங்கி லீன் வாய்ப்பு அதிகம்.',
+    prepare: 'மூன்று விஷயங்களை தயாராக வைத்திருங்கள்: 12 இலக்க UTR, வங்கி அறிக்கை, வந்த SMS அல்லது ரசீது.',
+    bankDesk: 'உங்கள் வங்கியின் 24x7 மோசடி உதவி மையத்தையும் அழைக்கவும் — லீனை வங்கிதான் விதிக்கிறது.',
+    neverShare: 'OTP, PIN அல்லது CVV யாருக்கும் சொல்லாதீர்கள் — வங்கி, சைபர் செல் அல்லது போலீஸ் என்பவர்களுக்கும் கூட.',
+    next: 'பிறகு இந்த படிவத்தை சமர்ப்பிக்கவும். க்யூ-நேத்ரா ஆதாரத்தை ஹாஷ் செய்து சைபர் செல் கட்டத்தை உருவாக்கும்.',
+    unknown: 'சைபர் மோசடி புகார் படிகளில் மட்டுமே நான் உதவ முடியும் — UTR, வங்கி, ஃப்ரீஸ், புகார். வழக்கு நிலைக்கு 1930-ஐ அழைக்கவும்.',
+  },
+  te: {
+    ask: 'మొదట చెప్పండి — ఏ బ్యాంక్ లేదా UPI యాప్ వాడారు, సుమారు ఎంత డబ్బు పోయింది?',
+    call1930: 'ఇప్పుడే 1930కి కాల్ చేయండి. గోల్డెన్ అవర్‌లో ఫిర్యాదు చేస్తే బ్యాంక్ లీన్ వచ్చే అవకాశం ఎక్కువ.',
+    prepare: 'మూడు విషయాలు సిద్ధంగా ఉంచండి: 12 అంకెల UTR, బ్యాంక్ స్టేట్‌మెంట్, వచ్చిన SMS లేదా రసీదు.',
+    bankDesk: 'మీ బ్యాంక్ 24x7 ఫ్రాడ్ డెస్క్‌కు కూడా కాల్ చేయండి — లీన్ బ్యాంకే వేస్తుంది.',
+    neverShare: 'OTP, PIN లేదా CVV ఎవరికీ చెప్పవద్దు — బ్యాంక్, సైబర్ సెల్ లేదా పోలీసు అని చెప్పినా.',
+    next: 'తర్వాత ఈ ఫారమ్ సమర్పించండి. క్యూ-నేత్రా ఆధారాలను హాష్ చేసి సైబర్ సెల్ ప్యాకెట్ తయారు చేస్తుంది.',
+    unknown: 'సైబర్ మోసం ఫిర్యాదు దశల్లో మాత్రమే నేను సహాయం చేయగలను — UTR, బ్యాంక్, ఫ్రీజ్, ఫిర్యాదు. కేసు స్థితి కోసం 1930కి కాల్ చేయండి.',
+  },
+  bn: {
+    ask: 'প্রথমে বলুন — কোন ব্যাংক বা UPI অ্যাপ ব্যবহার হয়েছিল, আর আনুমানিক কত টাকা গেছে?',
+    call1930: 'এখনই 1930-এ কল করুন। গোল্ডেন আওয়ারে অভিযোগ করলে ব্যাংক লিয়েনের সম্ভাবনা সবচেয়ে বেশি।',
+    prepare: 'তিনটি জিনিস তৈরি রাখুন: ১২ সংখ্যার UTR, ব্যাংক স্টেটমেন্ট, এবং পাওয়া SMS বা রসিদ।',
+    bankDesk: 'আপনার ব্যাংকের 24x7 ফ্রড ডেস্কেও কল করুন — লিয়েন ব্যাংকই দেয়।',
+    neverShare: 'OTP, PIN বা CVV কারও সঙ্গে শেয়ার করবেন না — ব্যাংক, সাইবার সেল বা পুলিশ বললেও না।',
+    next: 'তারপর এই ফর্ম জমা দিন। কিউ-নেত্রা প্রমাণের হ্যাশ তৈরি করে সাইবার সেল প্যাকেট বানায়।',
+    unknown: 'আমি শুধু সাইবার প্রতারণার অভিযোগের ধাপে সাহায্য করতে পারি — UTR, ব্যাংক, ফ্রিজ, অভিযোগ। কেসের অবস্থার জন্য 1930-এ কল করুন।',
+  },
+}
+
+function langKey(language, message) {
+  const code = String(language || '').toLowerCase().slice(0, 2)
+  if (LOCAL[code]) return code
+  if (/[\u0900-\u097F]/.test(String(message || ''))) return 'hi'
+  if (/[\u0A00-\u0A7F]/.test(String(message || ''))) return 'pa'
+  if (/[\u0B80-\u0BFF]/.test(String(message || ''))) return 'ta'
+  if (/[\u0C00-\u0C7F]/.test(String(message || ''))) return 'te'
+  if (/[\u0980-\u09FF]/.test(String(message || ''))) return 'bn'
+  return 'en'
+}
+
 function buildFallback({ message, history = [], currentForm = {}, language }) {
   const msg = String(message || '').toLowerCase()
+  const code = langKey(language, message)
+  const L = LOCAL[code]
   const extracted = extract(message, currentForm)
-  const hindi = isHindi(language, message)
   const bank = extracted.bank_name || currentForm.victim_bank
   const amount = extracted.amount_inr || currentForm.amount_inr
   const utr = extracted.utr || currentForm.utr
   const ncrp = extracted.ncrp_id || currentForm.ncrp_id
-  const scared = /dar|darr|scared|panic|ghabra|help me|bachao/.test(msg)
-  const praised = /1930|called|complaint/.test(msg)
 
-  let reply
-  if (scared) {
-    reply = hindi
-      ? 'Main samajh sakta hoon — aap dar rahe hain, aur yeh swabhavik hai. Aap akele nahi hain. Sabse pehle 1930 par call karein: Golden Hour ke andar report karne se lien hold ka chance sabse zyada hota hai.'
-      : 'I hear you — feeling scared is completely normal, and you are not alone. First step: call 1930 now, because reporting inside the Golden Hour gives the strongest chance of a lien hold.'
-  } else if (/joke|hasao|hansao/.test(msg)) {
-    reply = hindi
-      ? 'Ek chhota sa joke: computer doctor ke paas kyun gaya? Kyunki usko virus tha! Ab chaliye, aapka account secure karte hain.'
-      : 'A quick one: why did the computer go to the doctor? Because it had a virus! Now let us secure your account.'
-  } else if (praised) {
-    reply = hindi
-      ? 'Bahut badhiya — 1930 par call karna sahi pehla kadam tha. Ab apna UTR aur bank statement taiyaar rakhein, main aage ka packet bana deta hoon.'
-      : 'Good — calling 1930 was the right first step. Keep your UTR and bank statement ready; I will structure the packet from here.'
+  const scared = /dar|darr|scared|panic|ghabra|bachao|help me|pareshan|डर|ਡਰ|பயம்|భయం|ভয়/.test(msg)
+  const joke = /joke|hasao|hansao|funny|majak/.test(msg)
+  const called = /1930|called|complaint|shikayat/.test(msg)
+  const otp = /otp|pin\b|cvv|password|share karna/.test(msg)
+  const golden = /golden hour|kitna time|how long|time limit|deadline|30 min|kitne minute/.test(msg)
+  const recover = /recover|paisa wapas|money back|refund|milega|wapas milega/.test(msg)
+  const docs = /document|statement|proof|kya chahiye|what do i need|kagaz/.test(msg)
+  const police = /police|fir|thana|station|complaint file|report likhwa/.test(msg)
+  const exchangeQ = /exchange|binance|wazirx|coindcx|wallet|usdt|crypto/.test(msg)
+  const thanks = /thank|dhanyavad|shukriya|shukria|thanks/.test(msg)
+  const formHelp = /form|fill|bharo|kaise bhare|bhar na/.test(msg)
+
+  const said = []
+  const say = line => { if (line && !said.includes(line)) said.push(line) }
+
+  if (otp) {
+    say(L.neverShare)
+    say(L.call1930)
+  } else if (joke) {
+    say(code === 'hi'
+      ? 'एक छोटा सा जोक: कंप्यूटर डॉक्टर के पास क्यों गया? क्योंकि उसे वायरस था! अब चलिए, आपका अकाउंट सुरक्षित करते हैं।'
+      : code === 'en'
+        ? 'A quick one: why did the computer go to the doctor? Because it had a virus! Now let us secure your account.'
+        : L.call1930)
+    say(L.call1930)
+  } else if (scared) {
+    say(code === 'hi'
+      ? 'मैं समझ सकता हूँ — डरना स्वाभाविक है, और आप अकेले नहीं हैं।'
+      : code === 'en'
+        ? 'I hear you — feeling scared is completely normal, and you are not alone.'
+        : L.call1930)
+    say(L.call1930)
+    say(L.prepare)
+  } else if (golden) {
+    say(code === 'hi'
+      ? 'गोल्डन आवर लगभग तीस मिनट का होता है — इसी समय पैसा उसी बैंक या एक्सचेंज में रुका रहता है। देरी हो तो भी शिकायत करें: लंबा ट्रेल मिलने की संभावना बनी रहती है।'
+      : code === 'en'
+        ? 'The Golden Hour is roughly the first thirty minutes, when the money is still sitting in the receiving bank or exchange. Report even if it is later than that — the trail is simply harder to freeze.'
+        : L.call1930)
+    say(L.call1930)
+    say(L.prepare)
+  } else if (recover) {
+    say(code === 'hi'
+      ? 'ईमानदार जवाब: रिकवरी की संभावना इस बात पर है कि पैसा कहाँ रुका है। बैंक में रुका है तो लियन से रुक सकता है; एक्सचेंज पहुँच गया तो VASP नोटिस से; मिक्सर तक जाने के बाद वसूली बहुत कठिन है। इसलिए अभी कॉल करें।'
+      : code === 'en'
+        ? 'Honest answer: recovery depends on where the money stopped. Still inside a bank — a lien can hold it. Already at an exchange — a VASP notice can freeze that account. Already through a mixer — recovery is very hard. Which is exactly why the next ten minutes matter.'
+        : L.call1930)
+    say(L.bankDesk)
+    say(L.next)
+  } else if (docs) {
+    say(L.prepare)
+    say(L.next)
+  } else if (police) {
+    say(code === 'hi'
+      ? 'आपको थाने में कानूनी भाषा में लिखवाने की जरूरत नहीं। यह फॉर्म भरने से शिकायत दर्ज होती है और साइबर सेल को पैकेट मिल जाता है; 1930 पर रिपोर्ट अलग से दर्ज होती है।'
+      : code === 'en'
+        ? 'You do not need to draft anything in legal language at the station. Submitting this form registers the complaint and generates the Cyber Cell packet; the 1930 report is registered separately and both can run in parallel.'
+        : L.next)
+    say(L.next)
+  } else if (exchangeQ) {
+    say(L.bankDesk)
+    say(code === 'en'
+      ? 'Exchanges act only on a written notice from law enforcement, and Q-Netra generates that notice with the wallet, the amount and the hash of the evidence attached.'
+      : code === 'hi'
+        ? 'एक्सचेंज केवल लिखित नोटिस पर कार्रवाई करता है — क्यू-नेत्रा वही नोटिस वॉलेट, राशि और साक्ष्य के हैश के साथ बना देता है।'
+        : L.next)
+  } else if (thanks) {
+    say(code === 'hi'
+      ? 'आपने सही कदम उठाया। 1930 पर कॉल कर लिया हो तो सबसे जरूरी काम हो गया — अब फॉर्म जमा करें।'
+      : code === 'en'
+        ? 'You did the right thing by acting now. If 1930 is done, the hardest part is over — submit the form and the packet is generated.'
+        : L.next)
+  } else if (formHelp) {
+    say(L.next)
+  } else if (called) {
+    say(L.prepare)
+    say(L.next)
   } else if (!bank && !amount) {
-    reply = hindi
-      ? 'Pehle batayein: kaunsa bank ya UPI app use kiya, aur lagbhag kitne rupaye gaye?'
-      : 'First, which bank or UPI app did you use, and roughly how much money was lost?'
+    say(L.ask)
   } else {
     const known = []
-    if (bank) known.push(hindi ? `bank ${bank}` : `bank ${bank}`)
-    if (amount) known.push(hindi ? `rakam ₹${amount}` : `amount ₹${amount}`)
-    if (utr && !String(utr).startsWith('UNKNOWN')) known.push(hindi ? `UTR ${utr}` : `UTR ${utr}`)
-    if (ncrp) known.push(hindi ? `NCRP ${ncrp}` : `NCRP ${ncrp}`)
-    const captured = known.length ? known.join(', ') : (hindi ? 'aapki details' : 'your details')
-    reply = hindi
-      ? `Maine ${captured} note kar liya. Turant 1930 par call karein aur apne bank ke 24x7 fraud desk ko bhi inform karein — isse Golden Hour ke andar lien hold lagne ka chance badhta hai. Phir right side ka form submit kar dein, Cyber Cell packet ban jayega.`
-      : `I have noted ${captured}. Call 1930 now and also inform your bank's 24x7 fraud desk — that is what turns the Golden Hour into an actual lien hold. Then submit the form on the right and the Cyber Cell packet is generated.`
+    if (bank) known.push(bank)
+    if (amount) known.push(`₹${amount}`)
+    if (utr && !String(utr).startsWith('UNKNOWN')) known.push(`UTR ${utr}`)
+    if (ncrp) known.push(`NCRP ${ncrp}`)
+    if (known.length) {
+      say(code === 'hi' ? `मैंने नोट कर लिया: ${known.join(', ')}।` : `${known.join(' · ')}.`)
+    }
+    say(L.call1930)
+    say(L.next)
   }
 
+  if (!said.length) say(L.unknown)
+
+  let reply = said.join(' ')
   const lastBot = [...history].reverse().find(h => h?.role === 'assistant')?.content
-  if (lastBot && reply === lastBot) reply = (hindi ? 'Theek hai, aage badhein. ' : 'Let us continue. ') + reply
+  if (lastBot && reply === lastBot) {
+    reply = (code === 'hi' ? 'ठीक है, आगे बढ़ें। ' : 'Let us continue. ') + reply
+  }
+
+  const quick = code === 'hi'
+    ? ['मुझे UTR नहीं पता', 'मेरे पास संदिग्ध की जानकारी नहीं', 'मैंने 1930 पर कॉल कर लिया', 'फॉर्म भरने में मदद करें', 'एक छोटा जोक सुनाएँ']
+    : code === 'en'
+      ? QUICK_REPLIES
+      : [...QUICK_REPLIES.slice(0, 2), L.prepare]
 
   return {
     reply,
     extracted_fields: extracted,
-    quick_replies: QUICK_REPLIES,
-    emotion_state: scared ? 'calming' : 'guiding',
+    quick_replies: quick,
+    emotion_state: scared ? 'calming' : otp ? 'urgent_action' : 'guiding',
     engine_mode: 'local-fallback',
   }
 }

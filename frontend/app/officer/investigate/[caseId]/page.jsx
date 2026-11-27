@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { useFileIngest } from '../../../../hooks/useFileIngest'
 import { api, fetchWalletHops, fetchWalletRisk, calculateDilution, exportBsaPdf, fetchCaseAuditTrail } from '../../../../lib/api'
 import GraphCanvas from '../../../../components/organs/GraphCanvas'
+import Narrator from '../../../../components/Narrator'
 import RiskInspectorDrawer from '../../../../components/organs/RiskInspectorDrawer'
 import DilutionCalculator from '../../../../components/organs/DilutionCalculator'
 import TimelineOrgan from '../../../../components/organs/TimelineOrgan'
@@ -149,6 +150,7 @@ export default function InvestigatePage() {
       </div>
       <div className="flex-1 grid grid-cols-12 min-h-0 overflow-hidden">
         <aside className="col-span-3 border-r border-edge p-3 overflow-y-auto min-h-0 space-y-4">
+          <Narrator screen="investigate" />
           <div>
             <label className="flex items-center justify-center gap-2 w-full px-2 py-1.5 text-[11px] border border-dashed border-edge rounded cursor-pointer text-slate-300 hover:border-cyan hover:text-cyan">
               Attach bank statement (CSV)
