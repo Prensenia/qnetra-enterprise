@@ -3,6 +3,7 @@ node_modules/
 __pycache__/
 *.pyc
 *.log
+build.log
 .env
 dist/
 build/

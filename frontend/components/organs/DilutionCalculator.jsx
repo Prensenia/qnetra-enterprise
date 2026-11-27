@@ -32,6 +32,7 @@ export default function DilutionCalculator() {
       ))}
       <button onClick={addHop} className="px-2 py-1 border border-edge rounded">Add Hop</button>
       <button onClick={calc} className="px-3 py-1 bg-cyan text-black rounded">Calculate</button>
+      <div className="text-[10px] text-slate-500">New Ratio = Dirty Received ÷ Total Balance Post-Receipt</div>
       <label className="flex items-center gap-1"><input type="checkbox" checked={show} onChange={e=>setShow(e.target.checked)} /> Show Step-by-Step Calculation</label>
       {result && show && (
         <div className="space-y-1">

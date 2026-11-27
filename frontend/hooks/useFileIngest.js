@@ -3,6 +3,29 @@ import Papa from 'papaparse'
 
 const INDIAN_BANKS = ['SBI', 'HDFC', 'ICICI', 'AXIS', 'PNB', 'KOTAK', 'BOB', 'CANARA', 'UNION', 'INDUSIND', 'YES', 'IDFC', 'PAYTM', 'AIRTEL', 'INDIAPOST']
 
+// Bank exports label the same columns differently ("UTR Number" vs "utr",
+// "Amount (INR)" vs "amount", ...). Compare header keys with all punctuation,
+// spaces and casing stripped so both the internal schema and real Indian bank
+// CSVs map to the same unified fields.
+const normalizeKey = (key) => String(key || '').toLowerCase().replace(/[^a-z]/g, '')
+
+function field(row, aliases) {
+  const wanted = new Set(aliases)
+  for (const [key, value] of Object.entries(row || {})) {
+    if (!wanted.has(normalizeKey(key))) continue
+    if (value === undefined || value === null) continue
+    if (String(value).trim() === '') continue
+    return String(value).trim()
+  }
+  return ''
+}
+
+const UTR_KEYS = ['utr', 'utrnumber', 'utrno', 'rrn', 'transactionid', 'refno']
+const AMOUNT_KEYS = ['amount', 'amountinr', 'debit', 'credit', 'value', 'txnamount']
+const TIME_KEYS = ['timestamp', 'txndate', 'txndatetime', 'datetime', 'date', 'transactiondate', 'valuedate']
+const BANK_KEYS = ['bankname', 'bank', 'sourcebank', 'sourcename']
+const NARRATION_KEYS = ['narration', 'description', 'particulars', 'remarks', 'details']
+
 function digestToHex(digest) {
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
@@ -91,10 +114,11 @@ export function useFileIngest() {
     const data = parsed.data || []
     setRows(data)
     const norm = data.map(r => ({
-      utr: r.utr || r.UTR || r.RRN || r.transaction_id || r.utr_number || '',
-      amount: r.amount || r.Amount || r.debit || r.value || '',
-      timestamp: normalizeToIST(r.timestamp || r.Timestamp || r.date || r.txn_date || ''),
-      bank_name: normalizeBankName(r.bank_name || r.Bank || r.bank || r.source_bank || ''),
+      utr: field(r, UTR_KEYS),
+      amount: field(r, AMOUNT_KEYS),
+      timestamp: normalizeToIST(field(r, TIME_KEYS)),
+      bank_name: normalizeBankName(field(r, BANK_KEYS)),
+      narration: field(r, NARRATION_KEYS),
     }))
     setMapped(norm)
     return { hash: hashHex, rows: data, mapped: norm, headerIndex: hi }

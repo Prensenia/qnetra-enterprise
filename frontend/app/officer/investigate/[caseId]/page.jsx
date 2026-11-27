@@ -13,6 +13,17 @@ import SearchFilterBar from '../../../../components/organs/SearchFilterBar'
 import AssistiveCoPilot from '../../../../components/organs/AssistiveCoPilot'
 import { useDemoMode } from '../../../../context/DemoModeContext'
 
+// Canonical sample statement (mirrors docs/Demo_SBI_CyberFraud_Statement.csv).
+// Loaded as a real File object so it runs through the exact same ingest path as
+// a manual upload: Web Crypto SHA-256, header detection, IST normalisation.
+const SAMPLE_SBI_CSV = `Txn Date,UTR Number,Narration,Amount (INR),Type,Bank Name
+2026-09-08 10:30:15,420192830110,UPI/CR/420192830110/SALARY CREDIT/TECHCORP,525000.00,CREDIT,State Bank of India
+2026-09-08 10:31:04,420192830192,UPI/DR/420192830192/EXCHANGE ESCROW/WAZIRX-HOT,470000.00,DEBIT,State Bank of India
+2026-09-08 10:31:22,420192830205,IMPS/DR/420192830205/MULE-SPLIT-01/HDFC00012,15000.00,DEBIT,State Bank of India
+2026-09-08 10:31:39,420192830218,IMPS/DR/420192830218/MULE-SPLIT-02/ICIC00045,10000.00,DEBIT,State Bank of India
+2026-09-08 10:31:51,420192830231,UPI/DR/420192830231/P2P-LIQUIDITY/BINANCE-P2P,5000.00,DEBIT,State Bank of India
+`
+
 export default function InvestigatePage() {
   const params = useParams()
   const caseId = params.caseId
@@ -91,6 +102,16 @@ export default function InvestigatePage() {
     if (mode === 'client') toast.success('Court dossier downloaded (open and print to PDF)')
   }
 
+  async function loadSampleCsv() {
+    const file = new File([SAMPLE_SBI_CSV], 'Demo_SBI_CyberFraud_Statement.csv', { type: 'text/csv' })
+    try {
+      const result = await ingest(file)
+      toast.success(`Sample loaded: ${result.mapped.length} rows • SHA-256 ${result.hash.slice(0, 12)}…`)
+    } catch {
+      toast.error('Sample load failed')
+    }
+  }
+
   function handleFilter(f) {
     // client-side filter could be applied; for now just log
     console.log('filter', f)
@@ -107,6 +128,13 @@ export default function InvestigatePage() {
         <aside className="col-span-3 border-r border-edge p-3 overflow-y-auto min-h-0 space-y-4">
           <div>
             <input type="file" accept=".csv" onChange={e => e.target.files?.[0] && ingest(e.target.files[0])} className="text-xs" />
+            <button
+              onClick={loadSampleCsv}
+              className="mt-2 w-full px-2 py-1 text-[11px] border border-cyan/50 text-cyan rounded hover:bg-cyan/10"
+              title="Hash a realistic SBI cyber-fraud statement with Web Crypto and load it into the graph"
+            >
+              Load Sample SBI Fraud CSV (Demo)
+            </button>
             {hash && <div className="text-[10px] text-emerald-400 mt-1">[✓] Hash Generated & Immutable Logged: {hash.slice(0,12)}...</div>}
             {mapped.length > 0 && (
               <div className="mt-2 max-h-32 overflow-auto text-[10px]">
