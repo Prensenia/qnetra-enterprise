@@ -15,11 +15,14 @@ export function isBackendUnreachable(err) {
 
 async function tryFetch(path, options) {
   const controller = new AbortController()
-  const id = setTimeout(() => controller.abort(), 2500)
+  // Callers that must feel instant (the demo sign-in) can shorten the wait;
+  // everything else keeps the 2.5s budget for a slow-but-alive backend.
+  const { timeoutMs, ...rest } = options || {}
+  const id = setTimeout(() => controller.abort(), Number(timeoutMs) || 2500)
   try {
     const token = getToken()
-    const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) }
-    const res = await fetch(`${API}${path}`, { ...options, headers, signal: controller.signal })
+    const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(rest.headers || {}) }
+    const res = await fetch(`${API}${path}`, { ...rest, headers, signal: controller.signal })
     clearTimeout(id)
     if (!res.ok) throw new Error(await res.text())
     return res.json()
@@ -276,7 +279,10 @@ export async function exportBsaPdf(payload = {}) {
     if (!isBackendUnreachable(err) && !/unavailable|failed/i.test(String(err.message || err))) throw err
     const html = buildCourtDossierHtml(payload)
     const blob = new Blob([html], { type: 'text/html' })
-    return { blob, filename: `${payload.case_id || 'case'}_sec63_dossier.html`, mode: 'client' }
+    // `html` is returned so the workspace can render the certificate with an
+    // iframe srcDoc — a blob-URL iframe renders blank when the export is
+    // triggered from an async handler.
+    return { blob, filename: `${payload.case_id || 'case'}_sec63_dossier.html`, mode: 'client', html }
   }
 }
 

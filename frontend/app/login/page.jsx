@@ -42,6 +42,7 @@ export default function LoginPage() {
   const [agency, setAgency] = useState('Cyber Cell Chandigarh')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
+  const [pending, setPending] = useState(false)
 
   function signInDemo(demo, normalizedEmail) {
     persistDemoSession(normalizedEmail, demo)
@@ -54,7 +55,9 @@ export default function LoginPage() {
   // fall back to a demo session if the host is unreachable at all.
   async function attemptLogin(body) {
     try {
-      return await api('/api/auth/login', { method: 'POST', body })
+      // A hosted demo has no API host: fail fast (1.2s) so the demo session is
+      // not preceded by a silent three-second stare at the Sign In button.
+      return await api('/api/auth/login', { method: 'POST', body, timeoutMs: 1200 })
     } catch (err) {
       if (isBackendUnreachable(err)) throw err
       return api('/api/v1/auth/login', { method: 'POST', body })
@@ -63,6 +66,8 @@ export default function LoginPage() {
 
   async function login(e) {
     e.preventDefault()
+    if (pending) return
+    setPending(true)
     try {
       const res = await attemptLogin(JSON.stringify({ email, password }))
       localStorage.setItem('qnetra_token', res.access_token)
@@ -80,6 +85,8 @@ export default function LoginPage() {
         return
       }
       toast.error('Login failed')
+    } finally {
+      setPending(false)
     }
   }
 
@@ -132,16 +139,14 @@ export default function LoginPage() {
             <button onClick={() => setMode('register')} className={`px-3 py-1 rounded text-sm ${mode==='register' ? 'bg-cyan text-black' : 'border border-edge'}`}>Create New Account</button>
           </div>
 
-          {/* instant demo */}
-          <div className="mb-4 flex gap-2 flex-wrap">
-            {portal === 'citizen' ? (
-              <button onClick={demoCitizen} className="px-3 py-2 bg-emerald-600 text-white rounded text-sm">Instant Demo: Enter Citizen Helpdesk</button>
-            ) : (
-              <>
-                <button onClick={demoOfficer} className="px-3 py-2 bg-cyan text-black rounded text-sm">Demo: Lead Investigator</button>
-                <button onClick={demoAuditor} className="px-3 py-2 bg-cyan text-black rounded text-sm">Demo: Compliance Auditor</button>
-              </>
-            )}
+          {/* Demo accounts: always visible, so no portal card has to be found first. */}
+          <div className="mb-4">
+            <div className="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Judge quick fill — one click, then Sign In</div>
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={demoCitizen} className="px-3 py-2 bg-emerald-600 text-white rounded text-sm">Demo: Citizen (Victim)</button>
+              <button onClick={demoOfficer} className="px-3 py-2 bg-cyan text-black rounded text-sm">Demo: Lead Investigator</button>
+              <button onClick={demoAuditor} className="px-3 py-2 bg-cyan text-black rounded text-sm">Demo: Compliance Auditor</button>
+            </div>
           </div>
 
           {mode === 'login' ? (
@@ -151,7 +156,9 @@ export default function LoginPage() {
                 <input className="w-full bg-obsidian border border-edge rounded pl-9 pr-3 py-2" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" />
               </div>
               <input className="w-full bg-obsidian border border-edge rounded px-3 py-2" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password" />
-              <button className="w-full px-3 py-2 bg-cyan text-black rounded font-semibold" type="submit">Sign In</button>
+              <button className="w-full px-3 py-2 bg-cyan text-black rounded font-semibold disabled:opacity-70" type="submit" disabled={pending} aria-busy={pending}>
+                {pending ? 'Signing in…' : 'Sign In'}
+              </button>
             </form>
           ) : (
             <form onSubmit={register} className="space-y-3">

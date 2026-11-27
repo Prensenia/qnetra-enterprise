@@ -67,14 +67,22 @@ export default function CommandBar() {
         </div>
       </form>
 
-      <div className="flex items-center gap-2">
-        <span className={`w-2 h-2 rounded-full ${healthy ? 'bg-healthy animate-pulse' : 'bg-critical'}`} />
-        <span className="text-xs text-slate-400">PostgreSQL</span>
-        <span className={`w-2 h-2 rounded-full ${healthy ? 'bg-healthy animate-pulse' : 'bg-critical'}`} />
-        <span className="text-xs text-slate-400">Neo4j</span>
-        <span className={`w-2 h-2 rounded-full ${healthy ? 'bg-healthy animate-pulse' : 'bg-critical'}`} />
-        <span className="text-xs text-slate-400">RPC</span>
-      </div>
+      {healthy ? (
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-healthy animate-pulse" />
+          <span className="text-xs text-slate-400">PostgreSQL</span>
+          <span className="w-2 h-2 rounded-full bg-healthy animate-pulse" />
+          <span className="text-xs text-slate-400">Neo4j</span>
+          <span className="w-2 h-2 rounded-full bg-healthy animate-pulse" />
+          <span className="text-xs text-slate-400">RPC</span>
+        </div>
+      ) : (
+        // Offline/demo build: one honest amber chip beats three red dots that
+        // look like a broken stack on a projector.
+        <span className="text-[10px] px-2 py-1 border border-amber-600/60 bg-amber-950/40 rounded text-amber-300" title={engine}>
+          DEMO MODE · seeded data
+        </span>
+      )}
 
       <span className="text-[10px] px-2 py-1 border border-edge rounded text-slate-400">{engine}</span>
       {lookup && (

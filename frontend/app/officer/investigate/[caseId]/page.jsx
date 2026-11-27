@@ -36,6 +36,10 @@ export default function InvestigatePage() {
   const [risk, setRisk] = useState(null)
   const [dilution, setDilution] = useState(null)
   const [showCalc, setShowCalc] = useState(false)
+  // Offline dossier: shown in an in-page viewer because a popup opened from an
+  // async handler is blocked by default in Chrome, which made the Export button
+  // look dead on stage.
+  const [dossier, setDossier] = useState(null)
   const { hash, mapped, ingest } = useFileIngest()
   const activeWallet = selected || caseId
 
@@ -78,7 +82,7 @@ export default function InvestigatePage() {
     // Attribute the dossier to the selected node, else the highest-value wallet
     // in the loaded graph — never to the case id itself.
     const targetWallet = selected || nodes.find(n => /wallet/i.test(String(n.type || '')))?.id || null
-    const { blob, filename, mode } = await exportBsaPdf({
+    const { blob, filename, mode, html } = await exportBsaPdf({
       case_id: caseId,
       target_wallet: targetWallet,
       graph_snapshot_base64: base64,
@@ -88,18 +92,19 @@ export default function InvestigatePage() {
     })
     const url = URL.createObjectURL(blob)
     if (mode === 'client') {
-      // Open the print-ready certificate so the officer can review and print it.
-      const win = window.open(url, '_blank')
-      if (win) {
-        toast.success('Court dossier opened (print to PDF)')
-        setTimeout(() => URL.revokeObjectURL(url), 60000)
-        return
-      }
+      setDossier({ url, filename, html })
+      toast.success('Court dossier ready — review below, then print or download')
+      return
     }
     const a = document.createElement('a')
     a.href = url; a.download = filename; a.click()
     URL.revokeObjectURL(url)
-    if (mode === 'client') toast.success('Court dossier downloaded (open and print to PDF)')
+    toast.success('Court dossier downloaded')
+  }
+
+  function closeDossier() {
+    if (dossier?.url) URL.revokeObjectURL(dossier.url)
+    setDossier(null)
   }
 
   async function loadSampleCsv() {
@@ -159,6 +164,21 @@ export default function InvestigatePage() {
           <AssistiveCoPilot caseId={caseId} />
         </aside>
       </div>
+
+      {dossier && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col p-4" role="dialog" aria-label="Section 63(4) BSA dossier preview">
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <span className="text-sm font-bold text-cyan">Sec 63(4) BSA dossier — {caseId}</span>
+            <span className="text-[11px] text-slate-400">Part A (IO) · Part B (examiner) · SHA-256 table · dilution math</span>
+            <div className="ml-auto flex gap-2">
+              <button onClick={() => window.open(dossier.url, '_blank')} className="px-3 py-1 bg-panel border border-edge rounded text-xs">Print / open tab</button>
+              <a href={dossier.url} download={dossier.filename} className="px-3 py-1 bg-panel border border-edge rounded text-xs">Download</a>
+              <button onClick={closeDossier} className="px-3 py-1 bg-critical text-white rounded text-xs">Close</button>
+            </div>
+          </div>
+          <iframe srcDoc={dossier.html} title="Sec 63(4) dossier" className="flex-1 w-full bg-white rounded border border-edge" />
+        </div>
+      )}
     </div>
   )
 }
