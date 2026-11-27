@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import uuid, hashlib, os, httpx
 from ..store import CASES, save_case, add_audit
 from ..bank_helplines import lookup_bank
+from ..db import SessionLocal
+from ..models import EvidenceFile, AuditLogORM
 
 router = APIRouter(prefix="/api/v1/citizen", tags=["citizen"])
 
@@ -129,7 +131,7 @@ def create_citizen_case(req: CitizenCaseRequest):
     if req.exchange and req.exchange != "UNKNOWN_PLATFORM":
         nodes.append({"id": "VASP", "type": "VASPExchange", "label": req.exchange, "risk_score": 60, "risk_tier": "HIGH", "amount_usdt": (req.amount_inr or 0)/90, "timestamp": req.incident_time, "metadata": {}})
         edges.append({"id": "e_w_vasp", "source": "SUSPECT_WALLET", "target": "VASP", "type": "Exchange", "amount": (req.amount_inr or 0)/90, "asset": "USDT", "timestamp": req.incident_time, "evidence_type": "inferred"})
-    from .vasp_intel import enrich_node
+    from ..vasp_intel import enrich_node
     for n in nodes:
         enrich_node(n)
     case = {
@@ -175,3 +177,19 @@ def create_citizen_case(req: CitizenCaseRequest):
 @router.get("/cases")
 def list_citizen_cases():
     return [c for c in CASES.values() if c.get("complainant")]
+
+@router.post("/cases/{case_id}/evidence")
+async def upload_evidence(case_id: str, file: UploadFile = File(...), client_sha256: str = Form(...)):
+    content = await file.read()
+    server_hash = hashlib.sha256(content).hexdigest()
+    if client_sha256 != server_hash:
+        raise HTTPException(status_code=400, detail="TAMPER_DETECTED")
+    db = SessionLocal()
+    ef = EvidenceFile(id=str(uuid.uuid4()), case_id=case_id, filename=file.filename, file_type=file.content_type, client_sha256=client_sha256, server_sha256=server_hash, uploaded_by="citizen", uploaded_at_ist=__import__("datetime").datetime.now().isoformat())
+    db.add(ef)
+    al = AuditLogORM(id=str(uuid.uuid4()), case_id=case_id, actor_id="citizen", actor_role="Citizen", client_ip="0.0.0.0", action="EVIDENCE_UPLOAD", target_hash_or_id=server_hash, timestamp_ist=__import__("datetime").datetime.now().isoformat())
+    db.add(al)
+    db.commit()
+    db.close()
+    add_audit(case_id, "citizen", "Citizen", "EVIDENCE_UPLOAD", f"{file.filename} {server_hash}")
+    return {"status": "ok", "server_sha256": server_hash}

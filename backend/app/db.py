@@ -1,8 +1,14 @@
 import sqlite3, json, os
-from .security import hash_password
 from pathlib import Path
+from .security import hash_password
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from .models import Base
 
 DB_PATH = os.getenv("QNETRA_DB", str(Path(__file__).resolve().parents[2] / "qnetra.db"))
+
+engine = create_engine("sqlite:///" + DB_PATH, echo=False)
+SessionLocal = sessionmaker(bind=engine)
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
@@ -49,6 +55,8 @@ def init_db():
     """)
     conn.commit()
     conn.close()
+    engine = create_engine("sqlite:///" + DB_PATH, echo=False)
+    Base.metadata.create_all(engine)
 
 def seed_users():
     conn = get_conn()

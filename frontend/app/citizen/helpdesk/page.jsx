@@ -133,12 +133,23 @@ export default function CitizenHelpdesk() {
   function handleFiles(fs) {
     const mapped = fs.map(f => ({ name: f.name, size: f.size, type: f.type }))
     setFiles(prev => [...prev, ...mapped])
+    setFileObjects(prev => [...prev, ...fs])
   }
 
   async function submit() {
     try {
       const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: email || 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: files.map(f=>f.name) }
       const res = await api('/api/v1/citizen/cases', { method: 'POST', body: JSON.stringify(payload) })
+      // upload evidence files with hash verification
+      for (const f of fileObjects) {
+        const buf = await f.arrayBuffer()
+        const hashBuf = await window.crypto.subtle.digest('SHA-256', buf)
+        const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('')
+        const fd = new FormData()
+        fd.append('file', f)
+        fd.append('client_sha256', hashHex)
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/citizen/cases/${res.case_id}/evidence`, { method: 'POST', body: fd })
+      }
       toast.success('Case registered')
       sessionStorage.removeItem(storageKey)
       router.push(`/citizen/case-submitted/${res.case_id}`)

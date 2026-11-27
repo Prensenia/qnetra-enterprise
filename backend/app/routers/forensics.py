@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import os
 from ..graph_store import get_hops, risk, dilution
 from ..config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+from ..auth import get_current_user
 
 router = APIRouter(tags=["forensics"])
 
@@ -24,7 +25,7 @@ def neo4j_available():
         return False
 
 @router.get("/api/hops/{wallet_id}")
-def hops(wallet_id: str):
+def hops(wallet_id: str, user=Depends(get_current_user)):
     if neo4j_available():
         try:
             with _driver.session() as session:
@@ -54,10 +55,10 @@ class DilutionRequest(BaseModel):
     hops: List[DilutionHop]
 
 @router.post("/api/dilution/calculate")
-def calc_dilution(req: DilutionRequest):
+def calc_dilution(req: DilutionRequest, user=Depends(get_current_user)):
     hops_list = [h.dict() for h in req.hops]
     return dilution(req.initial_taint_ratio, hops_list)
 
 @router.get("/api/risk/{wallet_id}")
-def risk_endpoint(wallet_id: str):
+def risk_endpoint(wallet_id: str, user=Depends(get_current_user)):
     return risk(wallet_id)
