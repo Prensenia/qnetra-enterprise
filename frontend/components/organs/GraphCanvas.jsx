@@ -98,7 +98,10 @@ const GraphCanvas = forwardRef(function GraphCanvas({ nodes, edges, onNodeSelect
           { selector: '.qs-lit', style: { 'line-color': '#22d3ee', 'target-arrow-color': '#22d3ee', width: 2.5, 'line-style': 'dashed', 'line-dash-pattern': [7, 5], 'line-dash-offset': 0 } },
           { selector: '.qs-hot', style: { 'border-width': 5 } },
         ],
-        layout: { name: 'cose-bilkent', animate: animate ? 'end' : false, animationDuration: 700, idealEdgeLength: 110, nodeRepulsion: 6000 },
+        // Run the layout to its final positions before drawing: an animated layout
+        // leaves nodes stacked at the origin on slower builds, and every later fit
+        // then zooms into that pile.
+        layout: { name: 'cose-bilkent', animate: false, idealEdgeLength: 110, nodeRepulsion: 6000 },
       })
 
       cy.on('tap', 'node', evt => onNodeSelect && onNodeSelect(evt.target.id()))
@@ -114,7 +117,10 @@ const GraphCanvas = forwardRef(function GraphCanvas({ nodes, edges, onNodeSelect
       })
 
       cyRef.current = cy
-      setTimeout(() => { try { cy.resize(); cy.fit(undefined, 40) } catch {} }, 260)
+      const fitTrail = () => { try { cy.resize(); cy.fit(undefined, 40) } catch {} }
+      fitTrail()
+      setTimeout(fitTrail, 180)
+      setTimeout(fitTrail, 700)
 
       if (!animate) return
 
