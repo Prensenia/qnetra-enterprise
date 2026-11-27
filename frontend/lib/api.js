@@ -73,17 +73,26 @@ function demoHops() {
 }
 
 function demoRisk(walletId) {
+  // Score the node that was actually clicked. A fixed 70 for the victim account
+  // contradicted the graph label and made every wallet look identically dirty.
+  const node = DEMO_CHAIN.nodes.find(n => n.id === walletId)
+  const score = Number.isFinite(node?.risk_score) ? node.risk_score : 70
+  const level = score >= 70 ? 'CRITICAL' : score >= 45 ? 'HIGH' : score >= 25 ? 'MEDIUM' : 'LOW'
+  // Rule attribution is published only for the documented mule wallet, where the
+  // four weights sum to the displayed 70. Inventing rules elsewhere would let the
+  // screen explain a number it never computed.
+  const full = score === 70
   return {
     wallet_address: walletId,
-    overall_score: 70,
-    risk_level: 'CRITICAL',
-    score_breakdown: { mixer_exposure: 20, scam_cluster_proximity: 20, bridge_traversal: 15, rapid_fanout: 15 },
-    risk_reasons: [
+    overall_score: score,
+    risk_level: level,
+    score_breakdown: full ? { mixer_exposure: 20, scam_cluster_proximity: 20, bridge_traversal: 15, rapid_fanout: 15 } : {},
+    risk_reasons: full ? [
       { rule: 'Mixer Exposure', description: 'Direct interaction with known mixer contract', score: 20 },
       { rule: 'Scam Cluster Proximity', description: 'Proximity to flagged scam wallet cluster', score: 20 },
       { rule: 'Bridge Traversal', description: 'Cross-chain bridge traversal detected', score: 15 },
       { rule: 'Rapid Fan-Out', description: 'More than 5 downstream transfers within 60 seconds', score: 15 },
-    ],
+    ] : [],
     exchange: 'WazirX (Zanmai Labs)',
     fiu_status: 'FIU-IND show-cause issued (Dec 2023) — not a registered reporting entity',
     re_id: 'N/A (unregistered)',

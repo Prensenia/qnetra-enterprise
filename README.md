@@ -68,7 +68,7 @@ Every officer and citizen screen has a **Voice guide → Explain this screen** b
 | 0:00 | `/login` | — | "A cyber fraud victim in India has about thirty minutes before the money leaves the country. The system takes forty-eight hours. I'm Pranshu, this is Q-Netra." |
 | 0:20 | `/login` | **Demo: Citizen (Victim)** → **Sign In** | "Three roles in one product: victim, investigating officer, compliance auditor. Start where the clock starts." |
 | 0:35 | `/citizen/helpdesk` | Point at the countdown; **Voice guide → Explain this screen** | "The golden hour, running live. No lawyer, no hash, no statute — three steps." |
-| 1:00 | Q-Sahayak | *"I transferred 2.85 lakh from HDFC to a fake crypto desk 25 minutes ago"* | "She describes it in her own words. Q-Sahayak extracts the UTR, amount, bank and wallet, and answers in her language — six languages, no API key required." |
+| 1:00 | Q-Sahayak | *"I transferred ₹2,85,000 from HDFC to wallet TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE 25 minutes ago"* | "She describes it in her own words. Q-Sahayak extracts the amount, the bank and the wallet, and answers in her language — six languages, no API key required." |
 | 1:25 | Q-Sahayak | Switch language to **हिन्दी** | "Same product, same case, her language." |
 | 1:35 | `/officer/dashboard` | Scroll to the ledger | "On the officer's side it is already triaged — three live cases, ₹2.27 crore in scope, a new citizen submission flagged before anyone opened a file." |
 | 1:55 | Ledger | Point at **[✓] SHA-256 INTEGRITY VERIFIED** | "Every action is hash-chained and re-verified on screen. Section 63 BSA, not a slide." |
@@ -76,7 +76,7 @@ Every officer and citizen screen has a **Voice guide → Explain this screen** b
 | 2:35 | Workspace | Point at **70/100 CRITICAL**, then the four rules | "Seventy, and every point has a reason: mixer exposure, scam-cluster proximity, bridge traversal, fan-out. Ask me why any number is what it is." |
 | 2:55 | Dilution panel | Then **Export Sec 63 BSA Dossier PDF** | "Courts don't ask whether the money is dirty, they ask how much of the account is. 60% decays to 12% across five hops, so we freeze twelve percent, not the account. One click, and the dossier is out — four hours becomes under a second." |
 | 3:20 | Dossier modal | Stop on the Section 94 line | "And it says what it is: an analytical lead, not a finding of guilt, requiring independent verification under Section 94 BNSS. We don't accuse anyone; we make the first hour defensible." |
-| 3:40 | Dispatch (Auditor) | Show the read-only banner | "The auditor verifies everything and dispatches nothing. Separation of duty is in the product." |
+| 3:40 | Dispatch (Auditor) | On `/officer/dashboard`, sign in as **Demo: Compliance Auditor**, then press **Dispatch** on case `CYB-2026-089` and show the read-only banner | "The auditor verifies everything and dispatches nothing. Separation of duty is in the product." |
 | 3:55 | — | Hands off the laptop | "Q-Netra doesn't investigate faster. It makes the first hour count." |
 
 **If it breaks:** pre-signed-in tab for a slow login · refresh once for a blank graph · captions carry the voice if audio is blocked · the amber chip is deliberate — "every screen runs the same contracts the FastAPI service exposes; `docker compose up` swaps seeded data for live ingestion with no UI change."

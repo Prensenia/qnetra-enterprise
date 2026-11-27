@@ -8,9 +8,9 @@ import { Shield, Lock, User } from 'lucide-react'
 const DEMO_TOKEN = 'qnetra-demo-session-token'
 
 const DEMO_ACCOUNTS = {
-  'admin@cybernautics.in': { role: 'officer', displayRole: 'Lead Investigator', name: 'IO Pranshu Joshi', redirect: '/officer/dashboard' },
-  'auditor@cybernautics.in': { role: 'officer', displayRole: 'Auditor', name: 'Compliance Auditor', redirect: '/officer/dashboard' },
-  'victim.demo@citizen.in': { role: 'citizen', displayRole: 'Citizen', name: 'Demo Victim', redirect: '/citizen/helpdesk' },
+  'admin@cybernautics.in': { role: 'officer', displayRole: 'Lead Investigator', name: 'IO Pranshu Joshi', password: 'Admin@123', redirect: '/officer/dashboard' },
+  'auditor@cybernautics.in': { role: 'officer', displayRole: 'Auditor', name: 'Compliance Auditor', password: 'Auditor@123', redirect: '/officer/dashboard' },
+  'victim.demo@citizen.in': { role: 'citizen', displayRole: 'Citizen', name: 'Demo Victim', password: 'Citizen@123', redirect: '/citizen/helpdesk' },
 }
 
 // The backend is unreachable in demo mode, so the session is never validated
@@ -78,10 +78,15 @@ export default function LoginPage() {
       else router.push('/officer/dashboard')
     } catch (err) {
       // Vercel deployment without a reachable FastAPI host: fall back to a demo
-      // session for the three seeded accounts only.
+      // session for the three seeded accounts only — and only with that account's
+      // own demo password, so the fallback cannot become a password bypass.
       const demo = DEMO_ACCOUNTS[String(email).trim().toLowerCase()]
-      if (isBackendUnreachable(err) && demo) {
+      if (isBackendUnreachable(err) && demo && password === demo.password) {
         signInDemo(demo, String(email).trim().toLowerCase())
+        return
+      }
+      if (isBackendUnreachable(err) && demo) {
+        toast.error('Demo sign-in failed — use the password for this seeded account')
         return
       }
       toast.error('Login failed')

@@ -34,6 +34,9 @@ export default function CommandBar() {
   function logout() {
     localStorage.removeItem('qnetra_token')
     localStorage.removeItem('qnetra_role')
+    localStorage.removeItem('qnetra_user')
+    localStorage.removeItem('qnetra_user_email')
+    localStorage.removeItem('qnetra_demo_mode')
     router.push('/login')
   }
 

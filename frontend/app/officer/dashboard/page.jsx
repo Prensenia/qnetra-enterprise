@@ -73,7 +73,7 @@ Offline demo mode — seeded case data. Start the FastAPI + Neo4j stack (docker 
       </div>
       <Narrator screen="dashboard" />
       <div className="grid grid-cols-4 gap-4">
-        <Kpi label="Total Registered Cases" value={summary.active_investigations} />
+        <Kpi label="Active Investigations" value={summary.active_investigations} />
         <Kpi label="Traced Fiat (INR)" value={`₹${(summary.total_traced_inr/10000000).toFixed(2)} Cr`} />
         <Kpi label="Traced Crypto (USDT)" value={`$${summary.total_traced_usdt.toLocaleString()}`} />
         <Kpi label="Mule & VASP Clusters" value={summary.flagged_mule_clusters} />
@@ -93,7 +93,10 @@ Offline demo mode — seeded case data. Start the FastAPI + Neo4j stack (docker 
                 <td>{q.title}</td>
                 <td><span className="px-2 py-0.5 rounded text-xs bg-critical/20 text-critical">{q.risk_tier}</span>{q.status === 'NEW_CITIZEN_REPORT' && <span className="ml-2 px-2 py-0.5 rounded text-xs bg-emerald-900 text-emerald-300 animate-pulse">NEW CITIZEN SUBMISSION • AI PRE-TRIAGED</span>}</td>
                 <td>₹{(q.total_inr/100000).toFixed(1)}L</td>
-                <td><button onClick={() => router.push(`/officer/investigate/${q.case_id}`)} className="text-cyan underline text-xs">Launch Investigation</button></td>
+                <td>
+                  <button onClick={() => router.push(`/officer/investigate/${q.case_id}`)} className="text-cyan underline text-xs">Launch Investigation</button>
+                  <button onClick={() => router.push(`/officer/cases/${q.case_id}/dispatch`)} className="ml-3 text-amber-300 underline text-xs">Dispatch</button>
+                </td>
               </tr>
             ))}
           </tbody>

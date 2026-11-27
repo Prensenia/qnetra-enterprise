@@ -49,6 +49,9 @@ export default function CaseSubmitted() {
         </ol>
       </div>
       <button onClick={downloadReceipt} className="px-4 py-2 bg-emerald-600 text-white rounded">Download / Print Victim Acknowledgement Receipt</button>
+      <p className="text-[11px] text-slate-400 border-t border-slate-700 pt-3">
+        This is an analytical lead, not a final finding of guilt. Output generated requires independent verification under Section 94 BNSS 2023.
+      </p>
     </div>
   )
 }

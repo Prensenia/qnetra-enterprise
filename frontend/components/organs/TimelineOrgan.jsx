@@ -5,12 +5,20 @@ export default function TimelineOrgan({ edges = [], onNodeSelect }) {
   const [selected, setSelected] = useState(null)
   const [filter, setFilter] = useState('ALL')
 
+  // Graph edges carry an asset, not a type: INR hops are bank/UPI, anything
+  // else (USDT etc.) is a crypto hop.
+  const isCrypto = e => String(e.asset || '').toUpperCase() !== 'INR'
   const filtered = edges.filter(e => {
     if (filter === 'ALL') return true
-    if (filter === 'BANK') return e.type === 'Bank' || e.type === 'UPI'
-    if (filter === 'CRYPTO') return e.type === 'Crypto' || e.type === 'Exchange'
+    if (filter === 'BANK') return !isCrypto(e)
+    if (filter === 'CRYPTO') return isCrypto(e)
     return true
   })
+  const secondsBetween = (a, b) => {
+    const t1 = Date.parse(a?.timestamp), t2 = Date.parse(b?.timestamp)
+    if (!Number.isFinite(t1) || !Number.isFinite(t2)) return null
+    return Math.max(0, Math.round((t2 - t1) / 1000))
+  }
 
   return (
     <div className="space-y-3 text-xs">
@@ -25,16 +33,16 @@ export default function TimelineOrgan({ edges = [], onNodeSelect }) {
       {filtered.map((e, i) => (
         <div key={e.id || i} className={`border-l-2 pl-3 pb-3 cursor-pointer transition-colors ${selected === i ? 'border-cyan bg-cyan/5' : 'border-slate-600 hover:border-slate-400'}`} onClick={() => { setSelected(i); onNodeSelect && onNodeSelect(e.source) }}>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${e.type === 'Crypto' ? 'bg-red-900 text-red-300' : e.type === 'Exchange' ? 'bg-purple-900 text-purple-300' : 'bg-blue-900 text-blue-300'}`}>
-              {e.type === 'Crypto' ? 'WALLET' : e.type === 'Exchange' ? 'EXCHANGE' : 'BANK'}
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isCrypto(e) ? 'bg-red-900 text-red-300' : 'bg-blue-900 text-blue-300'}`}>
+              {isCrypto(e) ? 'CRYPTO' : 'BANK'}
             </span>
             <span className="text-slate-300 font-medium">{e.source} → {e.target}</span>
-            {i > 0 && <span className="text-amber-400 text-[10px]">[+{i * 13} sec]</span>}
+            {i > 0 && secondsBetween(filtered[i - 1], e) !== null && <span className="text-amber-400 text-[10px]">[+{secondsBetween(filtered[i - 1], e)} sec]</span>}
           </div>
           <div className="text-slate-500 mt-1">
             {e.amount} {e.asset} • {e.timestamp}
           </div>
-          {i > 0 && <div className="text-[10px] text-slate-600 mt-1">Elapsed from previous hop: {i * 13} seconds</div>}
+          {i > 0 && secondsBetween(filtered[i - 1], e) !== null && <div className="text-[10px] text-slate-600 mt-1">Elapsed from previous hop: {secondsBetween(filtered[i - 1], e)} seconds</div>}
           <div className="text-[10px] text-slate-600 mt-1">Evidence: {e.evidence_type || 'confirmed'} • Hop #{i + 1}</div>
         </div>
       ))}
@@ -42,6 +50,7 @@ export default function TimelineOrgan({ edges = [], onNodeSelect }) {
       <div className="text-[10px] text-slate-600 pt-2 border-t border-edge">
         Total hops: {edges.length} • Last event: {edges.length ? edges[edges.length - 1].timestamp : 'N/A'}
       </div>
+      <div className="text-[10px] text-slate-600">Timestamps are IST; elapsed time is computed between adjacent hops.</div>
     </div>
   )
 }

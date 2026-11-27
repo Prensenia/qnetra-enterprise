@@ -2,9 +2,43 @@ import { NextResponse } from 'next/server'
 
 const SYSTEM_PROMPT = `You are Q-Sahayak, Cybernautics' empathetic Indian Cyber Crisis & Golden-Hour Triage Companion. Be warm, human, reassuring. Support English, Hindi, Hinglish. If user greets, asks a joke, or vents, respond naturally (can tell a clean light one-line joke) before guiding to bank safety, calling 1930, and filling report. Use conversation history and current_form to avoid repeating questions. Always return valid JSON only: {"reply":"...","extracted_fields":{"scam_type":"","bank_name":"","amount_inr":"","utr":"","suspect_id":"","vasp_name":"","narrative":""},"quick_replies":["..."],"emotion_state":"calming|guiding|urgent_action"}.`
 
-// Real, currently served Gemini models. The earlier list (gemini-3.x) does not
-// exist, so a configured key could never reach a live model.
+// Fallback model names, used only when the key cannot list its own models.
 const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash']
+
+// Production testing showed the configured key present while every hardcoded
+// model returned HTTP 404. Ask the API which models this key may use (cached per
+// isolate), and if none answer, stop retrying for a few minutes — otherwise each
+// chat message pays four failed round trips before the local engine replies.
+const MODEL_TTL_MS = 5 * 60 * 1000
+let modelState = { checkedAt: 0, models: [], dead: false }
+
+async function listUsableModels(apiKey) {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`)
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  const data = await r.json()
+  const names = (data.models || [])
+    .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map(m => String(m.name || '').replace(/^models\//, ''))
+    .filter(Boolean)
+  const rank = n => (/flash/i.test(n) ? 2 : 0) + (/2\.5|3/.test(n) ? 1 : 0)
+  return names.sort((a, b) => rank(b) - rank(a)).slice(0, 4)
+}
+
+async function modelCandidates(apiKey) {
+  if (modelState.models.length) return modelState.models
+  try {
+    const found = await listUsableModels(apiKey)
+    if (found.length) {
+      modelState = { checkedAt: Date.now(), models: found, dead: false }
+      return found
+    }
+    modelState = { checkedAt: Date.now(), models: [], dead: true }
+  } catch {
+    // Listing can fail for reasons that do not mean the key is useless; try the
+    // fallback names once, and the dead-cache is set only if they all fail too.
+  }
+  return MODELS
+}
 
 const QUICK_REPLIES = [
   "I don't know the UTR",
@@ -42,12 +76,24 @@ function extract(message, currentForm = {}) {
   // A message can carry both the bank UTR and the NCRP acknowledgement.
   if (utr && !currentForm.utr) out.utr = utr[0]
   if (ncrp) out.ncrp_id = ncrp[0]
-  if (amount && !currentForm.amount_inr) {
-    const raw = String(amount[1])
-    const value = parseFloat(raw.replace(/,/g, ''))
-    // 1930 is the helpline and 1800-numbers are bank desks — never a loss amount.
-    const isHelpline = /^1800/.test(raw) || value === 1930 || value === 112 || value === 1930
-    if (!Number.isNaN(value) && value > 0 && !isHelpline) out.amount_inr = value
+  if (!currentForm.amount_inr) {
+    let value = null
+    if (amount) {
+      const raw = String(amount[1])
+      const parsed = parseFloat(raw.replace(/,/g, ''))
+      // 1930 is the helpline and 1800-numbers are bank desks — never a loss amount.
+      const isHelpline = /^1800/.test(raw) || parsed === 1930 || parsed === 112
+      if (!Number.isNaN(parsed) && parsed > 0 && !isHelpline) value = parsed
+    }
+    if (value === null) {
+      // "2.85 lakh" / "1.2 crore" — how the loss is actually spoken in India.
+      const scale = msg.match(/([\d,]+(?:\.\d{1,2})?)\s*(lakh|lacs?|crore|cr)\b/i)
+      if (scale) {
+        const base = parseFloat(scale[1].replace(/,/g, ''))
+        if (Number.isFinite(base) && base > 0) value = Math.round(base * (/crore|cr/i.test(scale[2]) ? 1e7 : 1e5))
+      }
+    }
+    if (value !== null) out.amount_inr = value
   }
   if (wallet && !currentForm.suspect_wallet) out.suspect_id = wallet[0]
   if (upi && !currentForm.suspect_upi) out.suspect_id = upi[0]
@@ -273,8 +319,11 @@ function buildFallback({ message, history = [], currentForm = {}, language }) {
 }
 
 async function callGemini(apiKey, prompt) {
+  if (modelState.dead && Date.now() - modelState.checkedAt < MODEL_TTL_MS) {
+    return { ok: false, error: 'no usable model for this key (cached) — local engine answered' }
+  }
   let lastError = ''
-  for (const model of MODELS) {
+  for (const model of await modelCandidates(apiKey)) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -294,6 +343,7 @@ async function callGemini(apiKey, prompt) {
       lastError = String(e)
     }
   }
+  modelState = { checkedAt: Date.now(), models: modelState.models, dead: true }
   return { ok: false, error: lastError || 'no model reachable' }
 }
 
@@ -336,11 +386,11 @@ export async function POST(req) {
         const p = res.parsed || {}
         const reply = p.reply || p.response || p.message || p.answer || res.text
         if (reply) {
-          // Model output is advisory: entity extraction stays deterministic so a
-          // hallucinated amount or UTR can never reach the complaint form.
+          // Deterministic extraction wins over the model: a hallucinated amount or
+          // UTR can fill a blank field, but can never overwrite one we parsed.
           return NextResponse.json({
             reply,
-            extracted_fields: { ...extract(message, currentForm), ...(p.extracted_fields || {}) },
+            extracted_fields: { ...(p.extracted_fields || {}), ...extract(message, currentForm) },
             quick_replies: p.quick_replies?.length ? p.quick_replies : QUICK_REPLIES,
             emotion_state: p.emotion_state || 'guiding',
             engine_mode: 'gemini-live',

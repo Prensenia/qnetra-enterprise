@@ -24,6 +24,17 @@ const DEMO_FORM = {
   time_approx: '',
 }
 
+// The scripted Q-Sahayak conversation for the demo account. Kept in one place so
+// the first load, a restored draft and the "Re-Load Demo Details" button can
+// never disagree about what the judge is looking at.
+const DEMO_MESSAGES = [
+  { role: 'assistant', text: 'Namaste! I am Q-Sahayak. Take a deep breath—you are safe, and acting right now within the Golden Hour gives us the strongest chance to freeze your money.' },
+  { role: 'user', text: 'Muje bahut dar lag raha hai, maine 20 minute pehle galti se ₹2,85,000 transfer kar diye fake crypto link pe, ghar pe kya bolunga' },
+  { role: 'assistant', text: 'Bilkul ghabraiye mat. Aap akela nahi hain, aur 20 minute ke andar report karne par RBI Zero-Liability aur 1930 CFCFRMS lien hold ka sabse zyada chance hota hai. Pehle aapki bank ka naam batayein taaki main turant block number de sakun.' },
+  { role: 'user', text: 'HDFC Bank se Google Pay kiya tha, mere paas bank statement CSV bhi hai' },
+  { role: 'assistant', text: 'Bahut badhiya! Maine HDFC Bank ka 24x7 Fraud Block Desk (1800-1600 / 1800-2600) neeche khol diya hai. Aap apna bank statement attach karke Submit dabayein—main aapki 1930 call script aur Cyber Cell packet turant taiyaar kar raha hoon.' },
+]
+
 export default function CitizenHelpdesk() {
   const router = useRouter()
   // Held in state and filled after mount: reading localStorage during render
@@ -74,13 +85,7 @@ export default function CitizenHelpdesk() {
     if (isDemo) {
       setForm({ ...DEMO_FORM })
       setNcrpId('30811260048912')
-      setMessages([
-        { role: 'assistant', text: 'Namaste! I am Q-Sahayak. Take a deep breath—you are safe, and acting right now within the Golden Hour gives us the strongest chance to freeze your money.' },
-        { role: 'user', text: 'Muje bahut dar lag raha hai, maine 20 minute pehle galti se ₹2,85,000 transfer kar diye fake crypto link pe, ghar pe kya bolunga' },
-        { role: 'assistant', text: 'Bilkul ghabraiye mat. Aap akela nahi hain, aur 20 minute ke andar report karne par RBI Zero-Liability aur 1930 CFCFRMS lien hold ka sabse zyada chance hota hai. Pehle aapki bank ka naam batayein taaki main turant block number de sakun.' },
-        { role: 'user', text: 'HDFC Bank se Google Pay kiya tha, mere paas bank statement CSV bhi hai' },
-        { role: 'assistant', text: 'Bahut badhiya! Maine HDFC Bank ka 24x7 Fraud Block Desk (1800-1600 / 1800-2600) neeche khol diya hai. Aap apna bank statement attach karke Submit dabayein—main aapki 1930 call script aur Cyber Cell packet turant taiyaar kar raha hoon.' },
-      ])
+      setMessages(DEMO_MESSAGES.map(m => ({ ...m })))
     }
   }, [email])
 
@@ -102,6 +107,11 @@ export default function CitizenHelpdesk() {
   function loadDemo() {
     setForm({ scam_type: 'Pig-Butchering / Fake Crypto Investment', incident_time: '', narrative: 'Received WhatsApp link to a fake institutional USDT trading desk. Transferred ₹2,85,000 via HDFC UPI before realizing withdrawals were blocked and funds moved to CoinDCX.', victim_bank: 'HDFC Bank', victim_upi: 'arjun.sharma@okhdfcbank', suspect_upi: 'desk.settlement99@okicici', suspect_wallet: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE', exchange: 'CoinDCX (FIU-IND Registered)', amount_inr: '285000', utrs: ['432918475612'], time_approx: '' })
     setNcrpId('30811260048912')
+    // Rewrite the saved draft as well, otherwise a stale draft keeps restoring
+    // the old conversation over the scripted one on the next reload.
+    setMessages(DEMO_MESSAGES.map(m => ({ ...m })))
+    setStep(1)
+    sessionStorage.removeItem(storageKey)
   }
 
   function parseSMS() {
@@ -161,7 +171,11 @@ export default function CitizenHelpdesk() {
       for (const f of fileObjects) {
         evidence.push({ name: f.name, size: f.size, sha256: await computeSha256Hex(f) })
       }
-      const payload = { ...form, ncrp_id: ncrpId, amount_inr: parseFloat(form.amount_inr || 0), complainant_name: 'Demo Citizen', mobile: '9999999999', email: email || 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: evidence.map(e => e.sha256) }
+      // Attribute the complaint to the signed-in account instead of a hardcoded
+      // demo name, and never send NaN for a blank amount.
+      let stored = null
+      try { stored = JSON.parse(localStorage.getItem('qnetra_user') || 'null') } catch {}
+      const payload = { ...form, ncrp_id: ncrpId, amount_inr: Number(form.amount_inr) || 0, complainant_name: stored?.name || 'Demo Citizen', mobile: '9999999999', email: stored?.email || email || 'victim.demo@citizen.in', city: 'Chandigarh', evidence_hashes: evidence.map(e => e.sha256) }
       const res = await createCitizenCase(payload, evidence)
 
       // Evidence upload only applies to a live case; an offline case already
@@ -339,7 +353,7 @@ export default function CitizenHelpdesk() {
 
               <label className="text-xs text-slate-400">{t(lang,'utr')}</label>
               <div className="flex gap-2">
-                <input value={form.utrs[0]} onChange={e=>setForm({...form, utrs: [e.target.value.replace(/\\D/g,'').slice(0,12)]})} placeholder="e.g., 432918475612 (from bank SMS or UPI receipt)" pattern="\\d{12}" className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+                <input value={form.utrs[0]} onChange={e=>setForm({...form, utrs: [e.target.value.replace(/\D/g,'').slice(0,12)]})} placeholder="e.g., 432918475612 (from bank SMS or UPI receipt)" pattern="\d{12}" inputMode="numeric" className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" />
                 <button onClick={() => setUnknown('utrs', ['UNKNOWN_UTR_BANK_STATEMENT_PENDING'])} className="px-2 py-1 text-xs border border-slate-600 rounded">{t(lang,'dontKnow')}</button>
               </div>
               {form.utrs[0] === 'UNKNOWN_UTR_BANK_STATEMENT_PENDING' && <div className="text-xs text-emerald-300">No problem—your bank statement or SMS will have this, and officers can still trace using your bank account & timestamp.</div>}

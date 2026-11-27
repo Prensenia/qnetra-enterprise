@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useFileIngest } from '../../../../hooks/useFileIngest'
@@ -40,6 +40,7 @@ export default function InvestigatePage() {
   // async handler is blocked by default in Chrome, which made the Export button
   // look dead on stage.
   const [dossier, setDossier] = useState(null)
+  const [filter, setFilter] = useState(null)
   const { hash, mapped, ingest } = useFileIngest()
   const activeWallet = selected || caseId
 
@@ -137,9 +138,46 @@ export default function InvestigatePage() {
   }
 
   function handleFilter(f) {
-    // client-side filter could be applied; for now just log
-    console.log('filter', f)
+    setFilter(f)
   }
+
+  // The filter bar is a real control: a filtered view of the graph keeps only
+  // the matching nodes and the hops that actually connect them.
+  const view = useMemo(() => {
+    if (!filter) return { nodes, edges, active: false }
+    const q = String(filter.query || '').trim().toLowerCase()
+    const min = String(filter.minAmt ?? '').trim() === '' ? null : Number(filter.minAmt)
+    const max = String(filter.maxAmt ?? '').trim() === '' ? null : Number(filter.maxAmt)
+    const tier = filter.risk || 'ALL'
+    const kept = nodes.filter(n => {
+      const text = `${n.id} ${n.label || ''} ${n.type || ''}`.toLowerCase()
+      if (q && !text.includes(q)) return false
+      const score = Number(n.risk_score || 0)
+      if (tier === 'CRITICAL' && score < 70) return false
+      if (tier === 'HIGH' && score < 45) return false
+      return true
+    })
+    const ids = new Set(kept.map(n => n.id))
+    // Keep one hop of context around a name match, so searching "Mixer" still
+    // shows the transfer that fed it instead of an orphan node.
+    if (q) {
+      edges.forEach(e => {
+        if (ids.has(e.source)) ids.add(e.target)
+        if (ids.has(e.target)) ids.add(e.source)
+      })
+    }
+    const keptNodes = nodes.filter(n => ids.has(n.id))
+    const keptEdges = edges.filter(e => {
+      if (!ids.has(e.source) || !ids.has(e.target)) return false
+      const amount = Number(e.amount)
+      if (Number.isFinite(amount)) {
+        if (min !== null && amount < min) return false
+        if (max !== null && amount > max) return false
+      }
+      return true
+    })
+    return { nodes: keptNodes, edges: keptEdges, active: true }
+  }, [nodes, edges, filter])
 
   return (
     <div className="h-screen flex flex-col">
@@ -147,6 +185,12 @@ export default function InvestigatePage() {
         <h1 className="text-lg font-bold text-cyan">Investigation: {caseId}</h1>
         <button onClick={exportPdf} className="px-3 py-1 bg-panel border border-edge rounded text-sm">Export Sec 63 BSA Dossier PDF</button>
         <SearchFilterBar onFilter={handleFilter} />
+        {filter && (
+          <span className="text-[11px] text-slate-400">
+            Filtered: {view.nodes.length}/{nodes.length} nodes · {view.edges.length}/{edges.length} hops
+            <button onClick={() => setFilter(null)} className="ml-2 text-cyan underline">Reset</button>
+          </span>
+        )}
       </div>
       <div className="flex-1 grid grid-cols-12 min-h-0 overflow-hidden">
         <aside className="col-span-3 border-r border-edge p-3 overflow-y-auto min-h-0 space-y-4">
@@ -178,12 +222,12 @@ export default function InvestigatePage() {
           <AuditTrailTable caseId={caseId} />
         </aside>
         <main className="col-span-6 relative min-h-0 overflow-hidden">
-          <GraphCanvas ref={graphRef} nodes={nodes} edges={edges} onNodeSelect={setSelected} />
+          <GraphCanvas ref={graphRef} nodes={view.nodes} edges={view.edges} onNodeSelect={setSelected} />
         </main>
         <aside className="col-span-3 border-l border-edge p-3 overflow-y-auto min-h-0 space-y-4">
-          <RiskInspectorDrawer walletId={selected} />
+          <RiskInspectorDrawer walletId={selected} nodeType={nodes.find(n => n.id === selected)?.type} />
           <DilutionCalculator />
-          <TimelineOrgan edges={edges} />
+          <TimelineOrgan edges={view.edges} onNodeSelect={setSelected} />
           <AssistiveCoPilot caseId={caseId} />
         </aside>
       </div>

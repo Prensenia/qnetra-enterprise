@@ -10,6 +10,9 @@ export default function RootShell({ children }) {
   const role = typeof window !== 'undefined' ? localStorage.getItem('qnetra_role') : null
   useEffect(() => {
     if (!pathname) return
+    const token = typeof window !== 'undefined' ? localStorage.getItem('qnetra_token') : null
+    const guarded = pathname.startsWith('/citizen') || pathname.startsWith('/officer')
+    if (guarded && !token) { router.replace('/login'); return }
     if (pathname.startsWith('/citizen')) {
       if (role && role !== 'Citizen') router.replace('/officer/dashboard')
     } else if (pathname.startsWith('/officer')) {
