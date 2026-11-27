@@ -111,13 +111,13 @@ export default function LoginPage() {
   function demoAuditor() { setEmail('auditor@cybernautics.in'); setPassword('Auditor@123'); setPortal('officer') }
 
   return (
-    <div className="min-h-screen bg-obsidian flex items-center justify-center p-6">
-      <div className="w-full max-w-6xl grid grid-cols-2 gap-8">
+    <div className="min-h-screen bg-obsidian flex items-center justify-center p-6 pb-16">
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left: value + portal selector */}
         <div className="space-y-6">
           <div>
             <div className="text-xs tracking-widest text-cyan mb-1">CYBERNAUTICS // Q-NETRA</div>
-            <h1 className="text-3xl font-bold text-white">Hybrid Financial Forensics & 1930 Golden-Hour Triage Suite</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Hybrid Financial Forensics & 1930 Golden-Hour Triage Suite</h1>
             <div className="mt-2 inline-block px-3 py-1 text-xs border border-cyan/40 rounded text-cyan">I4C-CFCFRMS Companion • FIU-IND PMLA Ready • BNSS 2023 Compliant</div>
           </div>
           <div className="space-y-3">

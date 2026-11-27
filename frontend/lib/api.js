@@ -176,24 +176,6 @@ export async function calculateDilution(payload) {
   }
 }
 
-export async function uploadCitizenEvidence(caseId, formData) {
-  return apiUpload(`/api/citizen/cases/${caseId}/evidence`, formData)
-}
-export async function downloadSec63Dossier(payload, isDemoMode) {
-  if (isDemoMode) {
-    const pdf = '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
-    const blob = new Blob([pdf], { type: 'application/pdf' })
-    return { blob, filename: 'sample_dossier.pdf' }
-  }
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/report/sec63-pdf`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  const blob = await res.blob()
-  return { blob, filename: 'dossier.pdf' }
-}
-
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]))
 }
@@ -265,24 +247,26 @@ function buildCourtDossierHtml(payload = {}) {
 </body></html>`
 }
 
+const DOSSIER_SERVICE_DOWN = 'dossier service unavailable'
+
 export async function exportBsaPdf(payload = {}) {
+  const caseId = payload.case_id || 'case'
   try {
     const res = await fetch(`${API}/api/report/sec63-pdf`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    if (!res.ok) throw new Error('dossier service unavailable')
-    const blob = await res.blob()
-    return { blob, filename: `${payload.case_id || 'case'}_sec63_dossier.pdf`, mode: 'server' }
+    if (!res.ok) throw new Error(DOSSIER_SERVICE_DOWN)
+    return { blob: await res.blob(), filename: `${caseId}_sec63_dossier.pdf`, mode: 'server' }
   } catch (err) {
-    if (!isBackendUnreachable(err) && !/unavailable|failed/i.test(String(err.message || err))) throw err
+    // Anything other than "host absent" or "endpoint refused" is a real bug and
+    // must surface; those two fall back to the on-device certificate.
+    if (!isBackendUnreachable(err) && err.message !== DOSSIER_SERVICE_DOWN) throw err
     const html = buildCourtDossierHtml(payload)
-    const blob = new Blob([html], { type: 'text/html' })
-    // `html` is returned so the workspace can render the certificate with an
-    // iframe srcDoc — a blob-URL iframe renders blank when the export is
-    // triggered from an async handler.
-    return { blob, filename: `${payload.case_id || 'case'}_sec63_dossier.html`, mode: 'client', html }
+    // `html` lets the workspace render the certificate with an iframe srcDoc;
+    // the blob stays for Download / Print.
+    return { blob: new Blob([html], { type: 'text/html' }), filename: `${caseId}_sec63_dossier.html`, mode: 'client', html }
   }
 }
 

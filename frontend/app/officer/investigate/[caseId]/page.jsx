@@ -35,7 +35,6 @@ export default function InvestigatePage() {
   const [selected, setSelected] = useState(null)
   const [risk, setRisk] = useState(null)
   const [dilution, setDilution] = useState(null)
-  const [showCalc, setShowCalc] = useState(false)
   // Offline dossier: shown in an in-page viewer because a popup opened from an
   // async handler is blocked by default in Chrome, which made the Export button
   // look dead on stage.
@@ -76,7 +75,27 @@ export default function InvestigatePage() {
     setDilution(res)
   }
 
+  // Release the blob URL whenever the viewer closes or is replaced, and stop the
+  // page behind the modal from scrolling (the workspace is wider than a phone).
+  useEffect(() => {
+    if (!dossier) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+      if (dossier.url) URL.revokeObjectURL(dossier.url)
+    }
+  }, [dossier])
+
   async function exportPdf() {
+    try {
+      await buildAndShowDossier()
+    } catch (err) {
+      toast.error(`Dossier export failed — ${String(err?.message || err).slice(0, 120)}`)
+    }
+  }
+
+  async function buildAndShowDossier() {
     const cy = graphRef.current?.getCy ? graphRef.current.getCy() : null
     const base64 = graphRef.current?.getSnapshotBase64 ? graphRef.current.getSnapshotBase64() : (cy ? cy.png({ full: true, scale: 1.5 }).split(',')[1] : null)
     // Attribute the dossier to the selected node, else the highest-value wallet
@@ -103,7 +122,6 @@ export default function InvestigatePage() {
   }
 
   function closeDossier() {
-    if (dossier?.url) URL.revokeObjectURL(dossier.url)
     setDossier(null)
   }
 
