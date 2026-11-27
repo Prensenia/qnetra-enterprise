@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Q-Netra — VBYLD 2027 Pitch (Project Violet Milk)</title>
+<style>
+  :root {
+    --navy: #0B1120;
+    --card: #172136;
+    --edge: #243149;
+    --violet: #7C3AED;
+    --emerald: #10B981;
+    --amber: #F59E0B;
+    --white: #F8FAFC;
+    --slate: #94A3B8;
+    --muted: #64748B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: "Segoe UI", Inter, system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+  }
+
+  /* ---------- slides ---------- */
+  .slide {
+    display: none;
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    padding: 6vh 7vw 8vh;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+  .slide::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(6,182,212,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(6,182,212,0.045) 1px, transparent 1px);
+    background-size: 44px 44px;
+    pointer-events: none;
+  }
+  .slide > * { position: relative; z-index: 1; }
+
+  .kicker {
+    font-size: clamp(11px, 1vw, 14px);
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--violet);
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-size: clamp(40px, 6.4vw, 86px);
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: clamp(26px, 3.4vw, 46px);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    max-width: 22ch;
+  }
+  .lead {
+    font-size: clamp(15px, 1.6vw, 22px);
+    color: var(--slate);
+    line-height: 1.45;
+    max-width: 62ch;
+  }
+
+  .accent-violet { color: var(--violet); }
+  .accent-emerald { color: var(--emerald); }
+  .accent-amber { color: var(--amber); }
+
+  .rule { width: 88px; height: 4px; border-radius: 4px; margin: 22px 0; }
+  .rule.violet { background: var(--violet); }
+  .rule.emerald { background: var(--emerald); }
+  .rule.amber { background: var(--amber); }
+
+  /* ---------- title slide ---------- */
+  .eyebrow {
+    display: inline-block;
+    align-self: flex-start;
+    border: 1px solid var(--violet);
+    background: rgba(124, 58, 237, .12);
+    color: var(--white);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: clamp(10px, .95vw, 13px);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 26px;
+  }
+  .title-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 40px;
+    margin-top: 34px;
+    font-size: clamp(13px, 1.15vw, 16px);
+    color: var(--slate);
+  }
+  .title-meta a { color: var(--emerald); text-decoration: none; }
+  .chips { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+  .chip {
+    background: var(--card);
+    border: 1px solid var(--edge);
+    border-radius: 14px;
+    padding: 16px 20px;
+    min-width: 132px;
+  }
+  .chip b { display: block; font-size: clamp(16px, 1.6vw, 22px); margin-bottom: 4px; }
+  .chip span { font-size: clamp(10px, .95vw, 12px); color: var(--slate); }
+
+  /* ---------- grids / cards ---------- */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 34px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 30px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 34px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--edge);
+    border-radius: 18px;
+    padding: 22px 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card .num {
+    font-size: clamp(13px, 1.05vw, 15px);
+    font-weight: 800;
+    letter-spacing: .08em;
+  }
+  .card h3 { font-size: clamp(16px, 1.55vw, 21px); line-height: 1.2; }
+  .card p { font-size: clamp(12px, 1.08vw, 15px); color: var(--slate); line-height: 1.45; }
+  .card ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .card li {
+    font-size: clamp(12px, 1.08vw, 15px);
+    color: var(--slate);
+    line-height: 1.4;
+    padding-left: 18px;
+    position: relative;
+  }
+  .card li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: .55em;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--violet);
+  }
+  .card.emerald li::before { background: var(--emerald); }
+  .card.amber li::before { background: var(--amber); }
+  .card .topline { height: 4px; border-radius: 4px; width: 46px; background: var(--violet); margin-bottom: 4px; }
+  .card.emerald .topline { background: var(--emerald); }
+  .card.amber .topline { background: var(--amber); }
+  .pillar-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; border-radius: 18px 0 0 18px; background: var(--emerald); }
+  .card.pillar { position: relative; padding-left: 30px; }
+  .card.pillar.violet-bar .pillar-accent { background: var(--violet); }
+
+  /* ---------- steps ---------- */
+  .step-num {
+    font-size: clamp(11px, .95vw, 13px);
+    font-weight: 800;
+    letter-spacing: .12em;
+    color: var(--violet);
+  }
+
+  /* ---------- comparison table ---------- */
+  table { width: 100%; border-collapse: collapse; margin-top: 28px; font-size: clamp(11px, 1.05vw, 15px); }
+  th, td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--edge); vertical-align: top; }
+  thead th {
+    font-size: clamp(10px, .95vw, 12px);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--slate);
+    border-bottom: 1px solid var(--edge);
+  }
+  tbody tr:nth-child(odd) { background: rgba(23, 33, 54, .55); }
+  td.ours { color: var(--emerald); font-weight: 600; }
+  th.ours-col { color: var(--emerald); }
+
+  /* ---------- impact + disclaimer ---------- */
+  .disclaimer {
+    margin-top: 30px;
+    border: 1px solid var(--amber);
+    background: rgba(245, 158, 11, .08);
+    border-radius: 16px;
+    padding: 20px 24px;
+  }
+  .disclaimer .label {
+    font-size: clamp(10px, .9vw, 12px);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--amber);
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .disclaimer p { font-size: clamp(12px, 1.1vw, 15px); color: #FDE68A; line-height: 1.5; }
+
+  /* ---------- chrome ---------- */
+  .brand {
+    position: absolute;
+    left: 7vw; bottom: 3.2vh;
+    font-size: 11px;
+    letter-spacing: .08em;
+    color: var(--muted);
+    z-index: 3;
+  }
+  .pageno {
+    position: absolute;
+    right: 7vw; bottom: 3.2vh;
+    font-size: 11px;
+    color: var(--muted);
+    z-index: 3;
+  }
+  .progress {
+    position: fixed;
+    left: 0; bottom: 0;
+    height: 3px;
+    background: var(--violet);
+    width: 0;
+    transition: width .25s ease;
+    z-index: 5;
+  }
+  .hint {
+    position: fixed;
+    right: 18px; top: 16px;
+    font-size: 11px;
+    color: var(--muted);
+    z-index: 6;
+  }
+
+  @media (max-width: 860px) {
+    .grid-3, .grid-4, .grid-2 { grid-template-columns: 1fr; }
+    .slide { padding: 6vh 7vw 10vh; overflow-y: auto; }
+  }
+
+  /* ---------- print: export every slide as a landscape page ---------- */
+  @media print {
+    @page { size: A4 landscape; margin: 0; }
+    body { overflow: visible; background: var(--navy); }
+    .hint, .progress { display: none; }
+    .slide {
+      display: flex !important;
+      width: 297mm;
+      height: 210mm;
+      page-break-after: always;
+      break-after: page;
+      padding: 18mm 20mm;
+    }
+    .slide:last-of-type { page-break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="hint">← → to move · Ctrl/Cmd + P to export PDF</div>
+<div class="progress" id="progress"></div>
+
+<!-- 1 ---------------------------------------------------------------- -->
+<section class="slide active">
+  <span class="eyebrow">VBYLD 2027 · Assistive Technology Track</span>
+  <h1>Q-NETRA</h1>
+  <p class="lead" style="margin-top:10px; color: var(--violet); font-size: clamp(18px, 2vw, 28px); font-weight: 700;">
+    Project Violet Milk
+  </p>
+  <div class="rule emerald"></div>
+  <p class="lead">
+    Assistive cyber-fraud triage and fiat-to-crypto forensics for India.<br />
+    The Golden Hour, the bank trail and the court certificate in one place.
+  </p>
+  <div class="title-meta">
+    <span><strong style="color: var(--white)">Pranshu Joshi</strong> · Founder, Cybernautics</span>
+    <a href="https://qnetra-enterprise.vercel.app" target="_blank" rel="noreferrer">qnetra-enterprise.vercel.app</a>
+    <span>Mumbai · ap-south-1 / bom1</span>
+  </div>
+  <div class="chips">
+    <div class="chip"><b class="accent-amber">02:00:00</b><span>Golden-Hour window</span></div>
+    <div class="chip"><b class="accent-emerald">6</b><span>Indian languages</span></div>
+    <div class="chip"><b class="accent-violet">Sec 63(4)</b><span>BSA 2023 court PDF</span></div>
+  </div>
+  <div class="brand">Q-Netra · Cybernautics</div>
+  <div class="pageno">01 / 06</div>
+</section>
+
+<!-- 2 ---------------------------------------------------------------- -->
+<section class="slide">
+  <div class="kicker" style="color: var(--amber)">The problem</div>
+  <h2>Three broken links in cyber-fraud recovery</h2>
+  <div class="grid-3">
+    <div class="card amber">
+      <div class="topline"></div>
+      <div class="num accent-amber">01</div>
+      <h3>Victim panic at the Golden Hour</h3>
+      <ul>
+        <li>The first two hours decide whether funds freeze</li>
+        <li>Victims are panicked and often not English speakers</li>
+        <li>No guided path from panic to a 1930 packet</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="topline"></div>
+      <div class="num accent-violet">02</div>
+      <h3>The investigation gap</h3>
+      <ul>
+        <li>SBI, HDFC and ICICI each export a different CSV</li>
+        <li>Fiat tracing stops at the exchange — USDT hops vanish</li>
+        <li>Officers rebuild the trail by hand, every case</li>
+      </ul>
+    </div>
+    <div class="card emerald">
+      <div class="topline"></div>
+      <div class="num accent-emerald">03</div>
+      <h3>Evidence rejected in court</h3>
+      <ul>
+        <li>Screenshots fail Section 63(4) BSA 2023</li>
+        <li>No hash chain means no proof of custody</li>
+        <li>Cases collapse on admissibility, not facts</li>
+      </ul>
+    </div>
+  </div>
+  <div class="brand">Q-Netra · Cybernautics</div>
+  <div class="pageno">02 / 06</div>
+</section>
+
+<!-- 3 ---------------------------------------------------------------- -->
+<section class="slide">
+  <div class="kicker">The solution</div>
+  <h2>Two assistive pillars, one product</h2>
+  <div class="grid-2">
+    <div class="card emerald pillar">
+      <div class="pillar-accent"></div>
+      <div class="step-num" style="color: var(--emerald)">PILLAR 1 · Q-SAHAYAK</div>
+      <h3>Citizen assistive triage</h3>
+      <ul>
+        <li>Bilingual voice dictation + speech read-out, 6 languages</li>
+        <li><strong>A+</strong> high-contrast mode at 115% text</li>
+        <li>Golden-Hour 02:00:00 countdown → one-tap <strong>1930</strong></li>
+        <li>SHA-256 victim receipt before evidence leaves the device</li>
+      </ul>
+    </div>
+    <div class="card violet-bar pillar">
+      <div class="pillar-accent"></div>
+      <div class="step-num">PILLAR 2 · OFFICER WORKBENCH</div>
+      <h3>Police forensic co-pilot</h3>
+      <ul>
+        <li>Multi-bank CSV normaliser: UTR, amount, IST, bank</li>
+        <li>Cytoscape fiat→crypto graph tied to the active case</li>
+        <li>One-click Sec 168 read with 94 BNSS freeze notice</li>
+        <li>Sec 63(4) BSA Part A + Part B court dossier</li>
+      </ul>
+    </div>
+  </div>
+  <div class="brand">Q-Netra · Cybernautics</div>
+  <div class="pageno">03 / 06</div>
+</section>
+
+<!-- 4 ---------------------------------------------------------------- -->
+<section class="slide">
+  <div class="kicker" style="color: var(--emerald)">How it works</div>
+  <h2>Victim upload to court PDF in four steps</h2>
+  <div class="grid-4">
+    <div class="card">
+      <div class="step-num">STEP 01</div>
+      <h3>Pre-parse SHA-256</h3>
+      <p>The file is hashed with Web Crypto before a single byte is parsed.</p>
+    </div>
+    <div class="card emerald">
+      <div class="step-num" style="color: var(--emerald)">STEP 02</div>
+      <h3>IST graph mapping</h3>
+      <p>Rows normalised to UTR, amount and IST time, then mapped onto the case graph.</p>
+    </div>
+    <div class="card amber">
+      <div class="step-num" style="color: var(--amber)">STEP 03</div>
+      <h3>Dilution &amp; risk</h3>
+      <p>New ratio = dirty received ÷ total balance post-receipt. +20 mixer, +15 fan-out.</p>
+    </div>
+    <div class="card">
+      <div class="step-num">STEP 04</div>
+      <h3>Sec 63(4) court PDF</h3>
+      <p>Part A (IO) + Part B (examiner), hash table and dilution annexure.</p>
+    </div>
+  </div>
+  <div class="brand">Q-Netra · Cybernautics</div>
+  <div class="pageno">04 / 06</div>
+</section>
+
+<!-- 5 ---------------------------------------------------------------- -->
+<section class="slide">
+  <div class="kicker" style="color: var(--amber)">Why it wins</div>
+  <h2>Built for Indian law, not translated from abroad</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th class="ours-col">Q-Netra</th>
+        <th>NCRP 1930</th>
+        <th>Foreign tools</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Victim assistance</td>
+        <td class="ours">Voice, 6 languages, A+ contrast</td>
+        <td>Web form, English-first</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td>Indian fiat / UTRs</td>
+        <td class="ours">SBI · HDFC · ICICI normalised</td>
+        <td>Manual entry</td>
+        <td>US / EU rails</td>
+      </tr>
+      <tr>
+        <td>BSA 2023 admissibility</td>
+        <td class="ours">Sec 63(4) Part A &amp; B PDF</td>
+        <td>Not produced</td>
+        <td>GDPR / FRCP only</td>
+      </tr>
+      <tr>
+        <td>RBI data localisation</td>
+        <td class="ours">Mumbai ap-south-1 / bom1</td>
+        <td>Government DC</td>
+        <td>Data leaves India</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="brand">Q-Netra · Cybernautics</div>
+  <div class="pageno">05 / 06</div>
+</section>
+
+<!-- 6 ---------------------------------------------------------------- -->
+<section class="slide">
+  <div class="kicker" style="color: var(--emerald)">Impact</div>
+  <h2>Trace in minutes, stay inside India</h2>
+  <div class="grid-3">
+    <div class="card">
+      <div class="topline" style="background: var(--violet)"></div>
+      <h3 class="accent-violet">&lt; 3 Minutes</h3>
+      <p>Victim upload to a traced, risk-scored graph.</p>
+    </div>
+    <div class="card emerald">
+      <div class="topline"></div>
+      <h3 class="accent-emerald">100% India</h3>
+      <p>Mumbai hosting and processing — bom1 / ap-south-1.</p>
+    </div>
+    <div class="card amber">
+      <div class="topline"></div>
+      <h3 class="accent-amber">Zero Barrier</h3>
+      <p>Voice, six languages and A+ contrast for Divyangjan and elderly users.</p>
+    </div>
+  </div>
+  <div class="disclaimer">
+    <div class="label">Mandatory statutory safeguard</div>
+    <p>
+      This is an analytical lead, not a final finding of guilt. Output generated requires independent
+      verification under Section 94 BNSS 2023. Freezes are limited to the tainted proportion —
+      innocent customer funds and commingled exchange liquidity pools are excluded.
+    </p>
+  </div>
+  <div class="brand">qnetra-enterprise.vercel.app · admin@cybernautics.in</div>
+  <div class="pageno">06 / 06</div>
+</section>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var index = 0;
+    var progress = document.getElementById('progress');
+
+    function show(next) {
+      if (next < 0) next = 0;
+      if (next > slides.length - 1) next = slides.length - 1;
+      slides[index].classList.remove('active');
+      index = next;
+      slides[index].classList.add('active');
+      progress.style.width = ((index + 1) / slides.length) * 100 + '%';
+      if (history.replaceState) history.replaceState(null, '', '#' + (index + 1));
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); show(index + 1); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(index - 1); }
+      else if (e.key === 'Home') { e.preventDefault(); show(0); }
+      else if (e.key === 'End') { e.preventDefault(); show(slides.length - 1); }
+    });
+
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('a, button')) return;
+      if (e.clientX > window.innerWidth * 0.6) show(index + 1);
+      else if (e.clientX < window.innerWidth * 0.4) show(index - 1);
+    });
+
+    var start = parseInt((location.hash || '').replace('#', ''), 10);
+    if (!isNaN(start) && start >= 1) { slides[0].classList.remove('active'); index = start - 1; slides[index].classList.add('active'); }
+    progress.style.width = ((index + 1) / slides.length) * 100 + '%';
+  })();
+</script>
+</body>
+</html>

@@ -7,7 +7,8 @@
 | | |
 |---|---|
 | **Live prototype** | https://qnetra-enterprise.vercel.app |
-| **Pitch deck** | [`docs/Q-Netra_VBYLD_Pitch_Deck.pptx`](docs/Q-Netra_VBYLD_Pitch_Deck.pptx) |
+| **Pitch deck (PowerPoint)** | [`docs/Q-Netra_VBYLD_Pitch_Deck.pptx`](docs/Q-Netra_VBYLD_Pitch_Deck.pptx) |
+| **Pitch deck (HTML, present in the browser)** | [`docs/pitch-deck.html`](docs/pitch-deck.html) — ←/→ to move, Ctrl/Cmd+P for a landscape PDF |
 | **Sample statement CSV** | [`docs/Demo_SBI_CyberFraud_Statement.csv`](docs/Demo_SBI_CyberFraud_Statement.csv) |
 | **Founder** | Pranshu Joshi, Cybernautics |
 
@@ -68,6 +69,8 @@ Deterministic rule-based risk (0-100): **+20** mixer exposure, **+15** rapid fan
 On the hosted prototype these three sign in through **demo mode** when the FastAPI host is unreachable: the same session, case queue, graph, risk panel and dossier export run from seeded data.
 
 **1-click demo:** open `/officer/investigate/CP-CYBER-2026-001` and press **"Load Sample SBI Fraud CSV (Demo)"** — the sample runs through the real ingest path (Web Crypto SHA-256 → header detection → IST normalisation → graph).
+
+**Judge run-sheet (10 minutes):** 5 minutes on [`docs/pitch-deck.html`](docs/pitch-deck.html) (problem → pillars → workflow → why it wins → impact), then 5 minutes live: citizen helpdesk (Golden Hour, A+, NCRP) → officer dashboard → sample CSV load (hash) → Verify All Hashes → node risk 70/100 → Sec 63(4) BSA dossier → VASP directory.
 
 ---
 
