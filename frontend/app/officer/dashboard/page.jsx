@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { api, isBackendUnreachable } from '../../../lib/api'
 import { useRouter } from 'next/navigation'
+import AuditTrailTable from '../../../components/organs/AuditTrailTable'
 import { toast } from 'sonner'
 import { Upload, Play } from 'lucide-react'
 
@@ -62,7 +63,7 @@ export default function OfficerDashboard() {
     <div className="p-6 space-y-6">
       {offline && (
         <div className="px-3 py-2 bg-amber-950 border border-amber-700 rounded text-xs text-amber-200">
-          Backend unreachable — showing the seeded demo case queue. Investigation, risk and dossier export run in offline demo mode.
+Offline demo mode — seeded case data. Start the FastAPI + Neo4j stack (docker compose up) for live ingestion, scoring and PDF generation; every screen below works either way.
         </div>
       )}
       <div className="flex justify-between items-center">
@@ -95,6 +96,50 @@ export default function OfficerDashboard() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+        <div className="bg-panel border border-edge rounded p-4">
+          <h2 className="text-sm font-bold">Chain-of-Custody Ledger</h2>
+          <p className="text-xs text-slate-400 mb-3">Every action on the case is hash-chained and re-verified against the stored SHA-256 digest — Section 63(4) BSA 2023 admissibility.</p>
+          <AuditTrailTable caseId="CYB-2026-089" />
+        </div>
+        <div className="bg-panel border border-edge rounded p-4">
+          <h2 className="text-sm font-bold">Exposure by Risk Tier</h2>
+          <p className="text-xs text-slate-400 mb-3">Where the seized volume actually sits across the open queue.</p>
+          <RiskTiers queue={summary.bridge_queue || []} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RiskTiers({ queue }) {
+  const rows = Object.values(queue.reduce((acc, q) => {
+    const tier = q.risk_tier || 'UNRATED'
+    acc[tier] = acc[tier] || { tier, cases: 0, volume: 0 }
+    acc[tier].cases += 1
+    acc[tier].volume += Number(q.total_inr) || 0
+    return acc
+  }, {})).sort((a, b) => b.volume - a.volume)
+  const max = Math.max(1, ...rows.map(r => r.volume))
+  const tone = { CRITICAL: 'bg-critical', HIGH: 'bg-amber-500', MEDIUM: 'bg-cyan', LOW: 'bg-emerald-500' }
+  if (!rows.length) return <div className="text-xs text-slate-400">No open cases.</div>
+  return (
+    <div className="space-y-3">
+      {rows.map(r => (
+        <div key={r.tier} className="space-y-1">
+          <div className="flex justify-between text-xs">
+            <span className="font-semibold">{r.tier} <span className="text-slate-500 font-normal">{r.cases} case{r.cases === 1 ? '' : 's'}</span></span>
+            <span className="font-mono text-slate-300">₹{(r.volume / 100000).toFixed(1)}L</span>
+          </div>
+          <div className="h-2 bg-obsidian rounded overflow-hidden">
+            <div className={`h-full ${tone[r.tier] || 'bg-slate-500'}`} style={{ width: `${(r.volume / max) * 100}%` }} />
+          </div>
+        </div>
+      ))}
+      <div className="text-[11px] text-slate-500 pt-1 border-t border-edge">
+        {rows.reduce((n, r) => n + r.cases, 0)} open cases · ₹{(rows.reduce((n, r) => n + r.volume, 0) / 10000000).toFixed(2)} Cr in scope
       </div>
     </div>
   )

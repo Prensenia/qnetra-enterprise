@@ -150,7 +150,10 @@ export default function InvestigatePage() {
       <div className="flex-1 grid grid-cols-12 min-h-0 overflow-hidden">
         <aside className="col-span-3 border-r border-edge p-3 overflow-y-auto min-h-0 space-y-4">
           <div>
-            <input type="file" accept=".csv" onChange={e => e.target.files?.[0] && ingest(e.target.files[0])} className="text-xs" />
+            <label className="flex items-center justify-center gap-2 w-full px-2 py-1.5 text-[11px] border border-dashed border-edge rounded cursor-pointer text-slate-300 hover:border-cyan hover:text-cyan">
+              Attach bank statement (CSV)
+              <input type="file" accept=".csv" onChange={e => e.target.files?.[0] && ingest(e.target.files[0])} className="hidden" />
+            </label>
             <button
               onClick={loadSampleCsv}
               className="mt-2 w-full px-2 py-1 text-[11px] border border-cyan/50 text-cyan rounded hover:bg-cyan/10"

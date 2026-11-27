@@ -273,7 +273,7 @@ export default function CitizenHelpdesk() {
                 <button onClick={() => setForm({...form, incident_time: ''})} className="px-3 py-2 bg-slate-700 text-white rounded text-xs">I Don't Know Exact Time</button>
               </div>
               <label className="text-xs text-slate-400">{t(lang,'narrative')}</label>
-              <textarea value={form.narrative} onChange={e=>setForm({...form, narrative: e.target.value})} placeholder={t(lang,'narrative')} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" rows={4} />
+              <textarea value={form.narrative} onChange={e=>setForm({...form, narrative: e.target.value})} placeholder="What happened? Amount, UPI ID, bank and time — in English, Hindi or Punjabi. You can also paste the SMS you received." className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" rows={4} />
               <button onClick={()=>setStep(2)} className="px-3 py-2 bg-emerald-600 text-white rounded">{t(lang,'next')}</button>
             </div>
           )}
@@ -386,6 +386,19 @@ export default function CitizenHelpdesk() {
             </div>
           )}
         </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {[
+          ['1', 'Freeze request, not a FIR', 'Your report opens a case and a bank freeze request inside the golden hour. It is a complaint, not an accusation.'],
+          ['2', 'Officer triages in minutes', 'The case appears in the officer queue pre-triaged by Q-Sahayak, with the UTR and bank already extracted.'],
+          ['3', 'You can track it', 'My Cases shows the status and every action taken on your evidence, hash-verified under Section 63 BSA 2023.'],
+        ].map(([n, title, body]) => (
+          <div key={n} className="p-3 rounded-xl border border-slate-700 bg-slate-800">
+            <div className="text-emerald-400 text-xs font-bold mb-1">STEP {n}</div>
+            <div className="text-sm font-semibold text-slate-100">{title}</div>
+            <div className="text-xs text-slate-400 mt-1 leading-relaxed">{body}</div>
+          </div>
+        ))}
       </div>
       {bankInfo && (
         <div className="p-3 border border-emerald-600 rounded bg-emerald-900 text-xs text-emerald-100">
