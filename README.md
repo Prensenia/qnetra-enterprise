@@ -9,6 +9,7 @@
 | **Live prototype** | https://qnetra-enterprise.vercel.app |
 | **Pitch deck (PowerPoint)** | [`docs/Q-Netra_VBYLD_Pitch_Deck.pptx`](docs/Q-Netra_VBYLD_Pitch_Deck.pptx) |
 | **Pitch deck (HTML, present in the browser)** | [`docs/pitch-deck.html`](docs/pitch-deck.html) — ←/→ to move, Ctrl/Cmd+P for a landscape PDF |
+| **Pitch deck (PDF, 6 slides, A4 landscape)** | [`docs/Q-Netra_VBYLD_Pitch_Deck.pdf`](docs/Q-Netra_VBYLD_Pitch_Deck.pdf) — opens on any phone or locked-down laptop, no PowerPoint needed |
 | **Sample statement CSV** | [`docs/Demo_SBI_CyberFraud_Statement.csv`](docs/Demo_SBI_CyberFraud_Statement.csv) |
 | **Founder** | Pranshu Joshi, Cybernautics |
 

@@ -238,7 +238,7 @@
     z-index: 6;
   }
 
-  @media (max-width: 860px) {
+  @media screen and (max-width: 860px) {
     .grid-3, .grid-4, .grid-2 { grid-template-columns: 1fr; }
     .slide { padding: 6vh 7vw 10vh; overflow-y: auto; }
   }
@@ -246,7 +246,13 @@
   /* ---------- print: export every slide as a landscape page ---------- */
   @media print {
     @page { size: A4 landscape; margin: 0; }
-    body { overflow: visible; background: var(--navy); }
+    html, body {
+      height: auto;
+      overflow: visible;
+      background: var(--navy);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
     .hint, .progress { display: none; }
     .slide {
       display: flex !important;
