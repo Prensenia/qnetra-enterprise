@@ -25,7 +25,12 @@ const DEMO_FORM = {
 
 export default function CitizenHelpdesk() {
   const router = useRouter()
-  const email = typeof window !== 'undefined' ? (localStorage.getItem('qnetra_user_email') || '') : ''
+  // Held in state and filled after mount: reading localStorage during render
+  // changed the banner markup between server and client (hydration mismatch).
+  const [email, setEmail] = useState('')
+  useEffect(() => {
+    try { setEmail(localStorage.getItem('qnetra_user_email') || '') } catch {}
+  }, [])
   const isDemo = email === 'victim.demo@citizen.in'
   const storageKey = `qnetra_citizen_draft_${email}`
 

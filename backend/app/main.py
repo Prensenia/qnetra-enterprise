@@ -22,6 +22,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# The frontend historically called /api/auth/* while the canonical prefix is
+# /api/v1/auth; serve both so neither client build hits a 404 for login.
+from fastapi import APIRouter as _APIRouter
+_legacy_auth = _APIRouter(prefix="/api/auth", tags=["auth-legacy"])
+_legacy_auth.add_api_route("/login", auth.login, methods=["POST"])
+_legacy_auth.add_api_route("/register", auth.register, methods=["POST"])
+app.include_router(_legacy_auth)
+
 app.include_router(auth.router)
 app.include_router(ingest.router)
 app.include_router(onchain.router)

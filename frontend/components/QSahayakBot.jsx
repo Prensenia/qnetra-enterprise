@@ -65,38 +65,85 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode, in
     }).catch(() => {})
   }, [])
 
+  const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function'
+
   useEffect(() => {
-    if (voiceMode && chat.length) {
-      const last = chat[chat.length-1]
-      if (last.role === 'assistant') {
-        const u = new SpeechSynthesisUtterance(last.text)
-        u.lang = speechLang
-        window.speechSynthesis.cancel()
-        window.speechSynthesis.speak(u)
-      }
+    if (!voiceMode || !chat.length || !canSpeak()) return
+    const last = chat[chat.length-1]
+    if (last.role !== 'assistant') return
+    try {
+      const u = new window.SpeechSynthesisUtterance(last.text)
+      u.lang = speechLang
+      window.speechSynthesis.cancel()
+      window.speechSynthesis.speak(u)
+    } catch {
+      setVoiceMode(false)
+      toast.error('Voice readout is unavailable in this browser')
     }
   }, [chat, voiceMode, speechLang])
 
   function speak(text) {
-    const u = new SpeechSynthesisUtterance(text)
-    u.lang = speechLang
-    window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(u)
+    if (!canSpeak()) { toast.error('Voice readout is unavailable in this browser'); return }
+    try {
+      const u = new window.SpeechSynthesisUtterance(text)
+      u.lang = speechLang
+      window.speechSynthesis.cancel()
+      window.speechSynthesis.speak(u)
+    } catch {
+      toast.error('Voice readout is unavailable in this browser')
+    }
   }
 
   function toggleMic() {
-    if (listening) { recRef.current?.stop(); setListening(false); return }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { toast.error('Voice not supported'); return }
-    const rec = new SR()
+    if (listening) { try { recRef.current?.stop() } catch {} ; setListening(false); return }
+    const SR = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null
+    if (!SR) { toast.error('Voice input needs Chrome or Edge — type your message instead'); return }
+    let rec
+    try {
+      rec = new SR()
+    } catch {
+      toast.error('Voice input could not start — type your message instead')
+      return
+    }
     rec.lang = speechLang
     rec.continuous = false
     rec.interimResults = false
-    rec.onresult = (e) => { setInput(e.results[0][0].transcript); setListening(false) }
+    rec.onresult = (e) => { setInput(e.results?.[0]?.[0]?.transcript || ''); setListening(false) }
     rec.onend = () => setListening(false)
+    rec.onerror = (e) => {
+      setListening(false)
+      const denied = ['not-allowed', 'service-not-allowed'].includes(e?.error)
+      toast.error(denied ? 'Microphone permission blocked — allow it in the browser, or type instead' : 'Voice input failed — type your message instead')
+    }
     recRef.current = rec
-    rec.start()
-    setListening(true)
+    try {
+      rec.start()
+      setListening(true)
+    } catch {
+      setListening(false)
+      toast.error('Voice input could not start — type your message instead')
+    }
+  }
+
+  // Server fields use API names (bank_name, suspect_id); the form uses its own.
+  function applyExtracted(fields) {
+    if (!fields) return
+    setForm(f => {
+      const next = { ...f }
+      if (fields.scam_type) next.scam_type = fields.scam_type
+      if (fields.bank_name && !fields.victim_bank) next.victim_bank = fields.bank_name
+      if (fields.victim_bank) next.victim_bank = fields.victim_bank
+      if (fields.amount_inr) next.amount_inr = String(fields.amount_inr)
+      if (fields.suspect_upi) next.suspect_upi = fields.suspect_upi
+      if (fields.suspect_wallet) next.suspect_wallet = fields.suspect_wallet
+      if (fields.vasp_name) next.exchange = fields.vasp_name
+      if (fields.utr && !String(fields.utr).startsWith('UNKNOWN')) next.utrs = [fields.utr]
+      if (fields.suspect_id) {
+        if (String(fields.suspect_id).includes('@')) next.suspect_upi = fields.suspect_id
+        else next.suspect_wallet = fields.suspect_id
+      }
+      return next
+    })
   }
 
   async function send(msgOverride) {
@@ -116,14 +163,14 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode, in
       const data = await res.json()
       const botReply = data.reply || data.message || data.response || data.answer || "I'm here with you. Tell me what happened and which bank or app was involved."
       setChat(c => [...c, { role: 'assistant', text: botReply }])
-      if (data.extracted_fields) setForm(f => ({ ...f, ...data.extracted_fields }))
+      if (data.extracted_fields) applyExtracted(data.extracted_fields)
       if (data.quick_replies) setQuickReplies(data.quick_replies)
       if (data.engine_mode) setEngineMode(data.engine_mode)
       if (data.debug_reason) setDebugReason(data.debug_reason)
     } catch {
       const data = fallbackReply(msg, form, speechLang, newChat)
       setChat(c => [...c, { role: 'assistant', text: data.reply }])
-      if (data.extracted_fields) setForm(f => ({ ...f, ...data.extracted_fields }))
+      if (data.extracted_fields) applyExtracted(data.extracted_fields)
       if (data.quick_replies) setQuickReplies(data.quick_replies)
       setEngineMode('local-fallback')
       setDebugReason('network or parse error')

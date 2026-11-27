@@ -135,6 +135,42 @@ else:
 for c in load_cases():
     CASES[c["case_id"]] = c
 
+# The jury demo case is seeded outside the first-run block so databases created
+# before it existed still expose the trail the README, deck and officer demo
+# link to (/officer/investigate/CP-CYBER-2026-001).
+if "CP-CYBER-2026-001" not in CASES:
+    nodes_cp001 = [
+        {"id": "victim_sbi_9812", "type": "Victim", "label": "Victim (SBI UPI)", "risk_score": 5, "risk_tier": "LOW", "amount_inr": 470000, "timestamp": _ts(0), "metadata": {}},
+        {"id": "SBI-9920182", "type": "Bank", "label": "SBI Bank (UTR 420192830192, Rs 4,70,000)", "risk_score": 40, "risk_tier": "ELEVATED", "amount_inr": 470000, "timestamp": _ts(2), "metadata": {}},
+        {"id": "0xCEX_WazirX_Hot", "type": "Exchange", "label": "WazirX Deposit", "risk_score": 65, "risk_tier": "HIGH", "amount_inr": 470000, "timestamp": _ts(3), "metadata": {}},
+        {"id": "0xA7F367e92d11b890", "type": "CryptoWallet", "label": "Primary Mule Wallet", "risk_score": 70, "risk_tier": "CRITICAL", "amount_usdt": 5200, "timestamp": _ts(4), "metadata": {}},
+        {"id": "0xBridge_Polygon_ETH", "type": "Bridge", "label": "Polygon to ETH Bridge", "risk_score": 85, "risk_tier": "CRITICAL", "amount_usdt": 2000, "timestamp": _ts(5), "metadata": {}},
+        {"id": "0xMixer_Tornado_Pool", "type": "Mixer", "label": "Mixer (Tornado-style)", "risk_score": 95, "risk_tier": "CRITICAL", "amount_usdt": 3200, "timestamp": _ts(6), "metadata": {}},
+    ]
+    edges_cp001 = [
+        {"id": "cp1", "source": "victim_sbi_9812", "target": "SBI-9920182", "type": "UPI", "amount": 470000, "asset": "INR", "timestamp": _ts(0), "evidence_type": "confirmed"},
+        {"id": "cp2", "source": "SBI-9920182", "target": "0xCEX_WazirX_Hot", "type": "Exchange", "amount": 470000, "asset": "INR", "timestamp": _ts(3), "evidence_type": "confirmed"},
+        {"id": "cp3", "source": "0xCEX_WazirX_Hot", "target": "0xA7F367e92d11b890", "type": "Crypto", "amount": 5200, "asset": "USDT", "timestamp": _ts(4), "evidence_type": "inferred"},
+        {"id": "cp4", "source": "0xA7F367e92d11b890", "target": "0xBridge_Polygon_ETH", "type": "Crypto", "amount": 2000, "asset": "USDT", "timestamp": _ts(5), "evidence_type": "inferred"},
+        {"id": "cp5", "source": "0xA7F367e92d11b890", "target": "0xMixer_Tornado_Pool", "type": "Crypto", "amount": 3200, "asset": "USDT", "timestamp": _ts(6), "evidence_type": "inferred"},
+    ]
+    for n in nodes_cp001:
+        enrich_node(n)
+    save_case({
+        "case_id": "CP-CYBER-2026-001",
+        "title": "SBI UPI to WazirX USDT Peel Chain (Jury Demo Case)",
+        "description": "Rs 4.70L victim transfer, UTR 420192830192, WazirX deposit to mule wallet 0xA7F367e92d11b890 and on to a Tornado-style mixer",
+        "complainant": {"name": "Demo Victim", "email": "victim.demo@citizen.in"},
+        "scam_type": "Pig-Butchering / Fake Crypto Investment",
+        "amount_inr": 470000,
+        "status": "ACTIVE",
+        "nodes": nodes_cp001,
+        "edges": edges_cp001,
+        "total_inr": 470000,
+        "total_usdt": 5200,
+        "triage_summary": "Q-Sahayak triage: SBI bank, amount 470000, UTR 420192830192. Downstream: WazirX deposit, mule wallet 0xA7F367e92d11b890, Polygon to ETH bridge, Tornado-style mixer.",
+    })
+
 # load audit logs
 conn = get_conn()
 for r in conn.execute("SELECT * FROM audit_logs").fetchall():

@@ -11,7 +11,16 @@ export default function CommandBar() {
   const [agency, setAgency] = useState('Cyber Cell Unit - Chandigarh')
   const [query, setQuery] = useState('')
   const [lookup, setLookup] = useState(null)
-  const role = typeof window !== 'undefined' ? (localStorage.getItem('qnetra_role') || 'Lead Investigator') : 'Lead Investigator'
+  const [role, setRole] = useState('Lead Investigator')
+
+  // localStorage is not available during SSR; read it after mount so the
+  // rendered role never mismatches the server HTML.
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('qnetra_role')
+      if (stored) setRole(stored)
+    } catch {}
+  }, [])
 
   useEffect(() => {
     const poll = () => {

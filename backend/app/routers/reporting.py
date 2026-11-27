@@ -180,27 +180,35 @@ def sec63_pdf(req: Sec63Request, x_demo_mode: str = Header(None)):
     pdf_bytes = buf.getvalue()
     pdf_hash = hashlib.sha256(pdf_bytes).hexdigest()
 
+    # Re-exporting the dossier for the same case must not fail: report_id is
+    # deterministic (RPT-<case_id>), so the ledger row is merged rather than
+    # inserted, and a persistence fault never blocks delivery of the PDF.
     db = SessionLocal()
-    db.add(GeneratedReport(
-        report_id=report_id,
-        case_id=req.case_id,
-        pdf_sha256=pdf_hash,
-        generated_by="officer",
-        is_demo=is_demo,
-        generated_at_ist=datetime.now(ist).isoformat(),
-    ))
-    db.add(AuditLogORM(
-        id=f"audit-{report_id}-{int(datetime.now(ist).timestamp())}",
-        case_id=req.case_id,
-        actor_id="officer",
-        actor_role="Lead Investigator",
-        client_ip="0.0.0.0",
-        action="EXPORT_PDF",
-        target_hash_or_id=pdf_hash,
-        timestamp_ist=datetime.now(ist).isoformat(),
-    ))
-    db.commit()
-    db.close()
+    try:
+        db.merge(GeneratedReport(
+            report_id=report_id,
+            case_id=req.case_id,
+            pdf_sha256=pdf_hash,
+            generated_by="officer",
+            is_demo=is_demo,
+            generated_at_ist=datetime.now(ist).isoformat(),
+        ))
+        db.add(AuditLogORM(
+            id=f"audit-{report_id}-{datetime.now(ist).strftime('%Y%m%d%H%M%S%f')}",
+            case_id=req.case_id,
+            actor_id="officer",
+            actor_role="Lead Investigator",
+            client_ip="0.0.0.0",
+            action="EXPORT_PDF",
+            target_hash_or_id=pdf_hash,
+            timestamp_ist=datetime.now(ist).isoformat(),
+        ))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print("Sec 63(4) ledger write skipped:", e)
+    finally:
+        db.close()
 
     return StreamingResponse(
         io.BytesIO(pdf_bytes),

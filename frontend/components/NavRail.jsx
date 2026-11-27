@@ -1,20 +1,31 @@
 'use client'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Search, Key, Building2, Wrench } from 'lucide-react'
 
-const activeCase = (typeof window !== 'undefined' && localStorage.getItem('qnetra_active_case')) || 'CYB-2026-101'
-
-const items = [
-  { href: '/officer/dashboard', label: 'Command Dashboard', icon: LayoutDashboard },
-  { href: `/officer/investigate/${activeCase}`, label: 'Investigation Graph', icon: Search },
-  { href: '/officer/vasp-directory', label: 'VASP Directory', icon: Building2 },
-  { href: '/officer/tools', label: 'Forensic CSV & Tools', icon: Wrench },
-  { href: '/officer/settings/api-keys', label: 'API Keys & Webhooks', icon: Key },
-]
+const DEFAULT_ACTIVE_CASE = 'CYB-2026-101'
 
 export default function NavRail() {
   const pathname = usePathname()
+  // Read the active case after mount: reading localStorage during render made
+  // the server and client hrefs disagree (hydration mismatch).
+  const [activeCase, setActiveCase] = useState(DEFAULT_ACTIVE_CASE)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('qnetra_active_case')
+      if (stored) setActiveCase(stored)
+    } catch {}
+  }, [])
+
+  const items = [
+    { href: '/officer/dashboard', label: 'Command Dashboard', icon: LayoutDashboard },
+    { href: `/officer/investigate/${activeCase}`, label: 'Investigation Graph', icon: Search },
+    { href: '/officer/vasp-directory', label: 'VASP Directory', icon: Building2 },
+    { href: '/officer/tools', label: 'Forensic CSV & Tools', icon: Wrench },
+    { href: '/officer/settings/api-keys', label: 'API Keys & Webhooks', icon: Key },
+  ]
+
   return (
     <nav className="w-16 bg-panel border-r border-edge flex flex-col items-center py-4 gap-4">
       {items.map(it => {

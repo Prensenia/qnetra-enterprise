@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { api } from '../../../../../lib/api'
+import { api, isBackendUnreachable } from '../../../../../lib/api'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 
@@ -9,17 +9,45 @@ export default function DispatchPage() {
   const caseId = params.caseId
   const [caseData, setCaseData] = useState(null)
   const [msg, setMsg] = useState('')
-  const role = typeof window !== 'undefined' ? localStorage.getItem('qnetra_role') : null
+  const [role, setRole] = useState(null)
+  useEffect(() => {
+    try { setRole(localStorage.getItem('qnetra_role')) } catch {}
+  }, [])
   const isAuditor = role === 'Auditor'
 
   useEffect(() => { api(`/api/v1/cases/${caseId}/graph`).then(setCaseData).catch(()=>{}) }, [caseId])
+
+  // Offline dossier-grade notice: the FastAPI host is absent on the Vercel demo,
+  // so the dispatch centre must still produce the freeze notice an IO can use.
+  function offlineNotice() {
+    return `FREEZE / LIEN NOTICE — ${caseId} (offline demo copy, regenerate against the API before service)
+
+To: Nodal Officer, HDFC Bank; Mule Nodal Desk, ICICI / Paytm; Compliance Desk, CoinDCX (FIU-IND)
+
+Sir / Madam,
+
+In exercise of Section 168 read with Section 94 of the Bharatiya Nagarik Suraksha Sanhita, 2023, you are directed to place an immediate lien / hold on the accounts and wallet addresses identified in the annexed trail of case ${caseId}, and to preserve the underlying records in original electronic form pending production.
+
+Safeguard: the hold is limited to the tainted proportion computed by proportional dilution (new ratio = dirty received / total balance post receipt). Innocent customer funds and commingled exchange liquidity pools are excluded from this direction.
+
+Restoration of any amount later found untainted will be sought under Section 106(1) BNSS 2023.
+
+This is an analytical lead, not a final finding of guilt. Output generated requires independent verification under Section 94 BNSS 2023.`
+  }
 
   async function dispatchAll() {
     try {
       const res = await api(`/api/v1/cases/${caseId}/generate-notice`, { method: 'POST', body: JSON.stringify({ target: 'HDFC Bank, ICICI/Paytm Mule Nodal Desk, CoinDCX FIU-IND Compliance Desk' }) })
       setMsg(res.notice)
       toast.success('All notices dispatched')
-    } catch { toast.error('Dispatch failed') }
+    } catch (err) {
+      if (isBackendUnreachable(err)) {
+        setMsg(offlineNotice())
+        toast.success('Notices generated offline (demo mode)')
+        return
+      }
+      toast.error('Dispatch rejected by backend')
+    }
   }
 
   return (
