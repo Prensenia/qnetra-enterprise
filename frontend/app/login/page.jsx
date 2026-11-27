@@ -7,10 +7,11 @@ import { Shield, Lock, User } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
+  const [briefOpen, setBriefOpen] = useState(false)
   const [portal, setPortal] = useState('citizen') // citizen | officer
   const [mode, setMode] = useState('login') // login | register
   const [email, setEmail] = useState('victim.demo@citizen.in')
-  const [password, setPassword] = useState('Demo@123')
+  const [password, setPassword] = useState('Citizen@123')
   const [name, setName] = useState('')
   const [mobile, setMobile] = useState('')
   const [city, setCity] = useState('')
@@ -50,7 +51,7 @@ export default function LoginPage() {
     }
   }
 
-  function demoCitizen() { setEmail('victim.demo@citizen.in'); setPassword('Demo@123'); setPortal('citizen') }
+  function demoCitizen() { setEmail('victim.demo@citizen.in'); setPassword('Citizen@123'); setPortal('citizen') }
   function demoOfficer() { setEmail('admin@cybernautics.in'); setPassword('Admin@123'); setPortal('officer') }
   function demoAuditor() { setEmail('auditor@cybernautics.in'); setPassword('Auditor@123'); setPortal('officer') }
 
@@ -125,6 +126,24 @@ export default function LoginPage() {
           )}
         </div>
       </div>
+
+      <div className="mt-6 text-center">
+        <button onClick={() => setBriefOpen(true)} className="text-xs text-cyan underline">VBYLD 2027 Policy & Revenue Brief</button>
+      </div>
+
+      {briefOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setBriefOpen(false)}>
+          <div className="bg-panel border border-edge rounded-xl p-6 max-w-2xl w-full mx-4" onClick={e=>e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-cyan mb-3">VBYLD 2027 Policy & Revenue Brief</h2>
+            <div className="text-sm text-slate-300 space-y-2">
+              <p><strong>NCRP–CFCFRMS Integration:</strong> Q-Netra bridges Layer-1 bank holds with FIU-IND VASP freezes under Section 94 read with Section 168 & Section 106 BNSS, 2023 and BSA Section 63.</p>
+              <p><strong>National Impact:</strong> Cuts IO notice drafting from 4 hrs to 45 sec, supports 6 Indian languages + voice accessibility for Divyangjan/elderly, streamlines BNSS Sec 106 / Sec 503 victim fund restoration.</p>
+              <p><strong>B2G + B2B RegTech Model:</strong> State Cyber Cell SaaS + FIU-IND VASP Compliance Webhook API + Bank Mule-Velocity API (₹0 free citizen access).</p>
+            </div>
+            <button onClick={() => setBriefOpen(false)} className="mt-4 px-3 py-2 bg-cyan text-black rounded">Close</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

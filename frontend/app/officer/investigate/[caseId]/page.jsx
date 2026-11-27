@@ -35,6 +35,7 @@ export default function InvestigatePage() {
   const [tab, setTab] = useState('entity')
   const [notes, setNotes] = useState('')
   const [notice, setNotice] = useState('')
+  const isAuditor = typeof window !== 'undefined' && localStorage.getItem('qnetra_role') === 'Auditor'
 
   useEffect(() => {
     api(`/api/v1/cases/${caseId}/graph`).then(g => {
@@ -73,6 +74,18 @@ export default function InvestigatePage() {
       cy.on('tap', evt => { if (evt.target === cy) setSelected(null) })
       cyRef.current = cy
       applyFilters(cy, threshold, collapsed, times, timeIndex)
+      setTimeout(() => {
+        try {
+          cy.resize()
+          cy.fit(undefined, 30)
+          const highest = cy.nodes().max(n => n.data('risk') || 0)
+          if (highest && !highest.empty()) {
+            cy.$(':selected').unselect()
+            highest.select()
+            setSelected({ type: 'node', data: highest.data() })
+          }
+        } catch {}
+      }, 500)
     })
     return () => { if (cy) cy.destroy() }
   }, [graph])
@@ -210,6 +223,7 @@ export default function InvestigatePage() {
     <div className="h-screen flex flex-col">
       <div className="p-3 border-b border-edge flex gap-2 items-center flex-wrap">
         <h1 className="text-lg font-bold text-cyan">Investigation: {caseId}</h1>
+      {isAuditor && <span className="px-2 py-1 text-xs border border-amber-600 rounded text-amber-300">Read-Only Compliance Auditor Mode — BSA Sec 63 Verification</span>}
         <button onClick={runAnalyze} className="px-3 py-1 bg-panel border border-edge rounded text-sm">Analyze</button>
         <button onClick={exportPdf} className="px-3 py-1 bg-panel border border-edge rounded text-sm">Export PDF</button>
         <button onClick={isolatePath} className="px-3 py-1 bg-panel border border-edge rounded text-sm">Isolate Shortest Path</button>
@@ -280,7 +294,7 @@ export default function InvestigatePage() {
                   <textarea value={notes} onChange={e=>setNotes(e.target.value)} className="w-full bg-obsidian border border-edge rounded p-2 text-xs" rows={4} placeholder="Investigator notes..." />
                   <div className="flex gap-2">
                     <button onClick={saveNotes} className="px-3 py-1 bg-cyan text-black rounded text-xs">Save Notes</button>
-                    <button onClick={generateNotice} className="px-3 py-1 bg-panel border border-edge rounded text-xs">Draft BNSS Sec 94 Notice</button>
+                    <button onClick={generateNotice} disabled={isAuditor} className="px-3 py-1 bg-panel border border-edge rounded text-xs disabled:opacity-40 disabled:cursor-not-allowed">Draft BNSS Sec 94 Notice</button>
                   </div>
                   {notice && <pre className="text-[10px] text-slate-400 bg-obsidian p-2 rounded overflow-auto">{notice}</pre>}
                 </>

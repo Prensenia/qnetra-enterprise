@@ -1,4 +1,5 @@
 import sqlite3, json, os
+from .security import hash_password
 from pathlib import Path
 
 DB_PATH = os.getenv("QNETRA_DB", str(Path(__file__).resolve().parents[2] / "qnetra.db"))
@@ -54,9 +55,9 @@ def seed_users():
     cur = conn.cursor()
     if cur.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         users = [
-            ("admin@cybernautics.in", "Admin@123", "Lead Investigator", "Admin User", "BADGE-001", "Cyber Cell Chandigarh"),
-            ("auditor@cybernautics.in", "Auditor@123", "Auditor", "Auditor User", "BADGE-002", "FIU-IND Sandbox"),
-            ("victim.demo@citizen.in", "Demo@123", "Citizen", "Demo Victim", "", "Chandigarh"),
+            ("admin@cybernautics.in", hash_password("Admin@123"), "Lead Investigator", "Admin User", "BADGE-001", "Cyber Cell Chandigarh"),
+            ("auditor@cybernautics.in", hash_password("Auditor@123"), "Auditor", "Auditor User", "BADGE-002", "FIU-IND Sandbox"),
+            ("victim.demo@citizen.in", hash_password("Citizen@123"), "Citizen", "Demo Victim", "", "Chandigarh"),
         ]
         cur.executemany("INSERT INTO users (email,password,role,name,badge,agency) VALUES (?,?,?,?,?,?)", users)
         conn.commit()
