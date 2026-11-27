@@ -15,9 +15,7 @@ export default function CommandBar() {
 
   useEffect(() => {
     const poll = () => {
-      const isLocal = window.location.hostname.includes('localhost')
-      if (!isLocal) { setEngine('Edge Forensics Engine • Live'); setHealth({status:'ok'}); return }
-      api('/health').then(h => { setHealth(h); setEngine('Connected FastAPI') }).catch(()=>{ setHealth({status:'offline'}); setEngine('Edge Standalone Mode') })
+      api('/health').then(h => { setHealth(h); setEngine('Connected FastAPI') }).catch(()=>{ setHealth({status:'offline'}); setEngine('Backend Offline') })
     }
     poll()
     const id = setInterval(poll, 10000)

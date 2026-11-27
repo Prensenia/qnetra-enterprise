@@ -12,16 +12,27 @@ export function useFileIngest() {
     const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('')
     setHash(hashHex)
     const text = await file.text()
-    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true })
-    setRows(parsed.data)
-    const norm = parsed.data.map(r => ({
-      utr: r.utr || r.UTR || r.RRN || r.transaction_id || '',
-      amount: r.amount || r.Amount || r.debit || '',
-      timestamp: r.timestamp || r.Timestamp || r.date || '',
-      bank_name: r.bank_name || r.Bank || r.bank || '',
+    const lines = text.split(/\r?\n/)
+    // find header row
+    let headerIndex = 0
+    for (let i = 0; i < lines.length; i++) {
+      if (/source_id|source|target_id|target|amount|asset|timestamp|utr/i.test(lines[i])) {
+        headerIndex = i
+        break
+      }
+    }
+    const csvText = lines.slice(headerIndex).join('\n')
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true })
+    const data = parsed.data || []
+    setRows(data)
+    const norm = data.map(r => ({
+      utr: r.utr || r.UTR || r.RRN || r.transaction_id || r.utr_number || '',
+      amount: r.amount || r.Amount || r.debit || r.value || '',
+      timestamp: r.timestamp || r.Timestamp || r.date || r.txn_date || '',
+      bank_name: r.bank_name || r.Bank || r.bank || r.source_bank || '',
     }))
     setMapped(norm)
-    return { hash: hashHex, rows: parsed.data, mapped: norm }
+    return { hash: hashHex, rows: data, mapped: norm }
   }
 
   return { hash, rows, mapped, ingest }

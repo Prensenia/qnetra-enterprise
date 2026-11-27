@@ -5,9 +5,11 @@ from ..store import CASES, add_audit
 router = APIRouter(prefix="/api/v1/ingest", tags=["ingest"])
 
 @router.post("/batch")
-async def ingest_batch(file: UploadFile = File(...), case_id: str = Form("CYB-2026-089")):
+async def ingest_batch(file: UploadFile = File(...), case_id: str = Form("CYB-2026-089"), client_sha256: str = Form(None)):
     content = await file.read()
     file_hash = hashlib.sha256(content).hexdigest()
+    if client_sha256 and client_sha256 != file_hash:
+        raise HTTPException(status_code=400, detail="TAMPER_DETECTED")
     case = CASES.get(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")

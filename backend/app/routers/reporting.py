@@ -2,8 +2,9 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
-import io
+import io, base64
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 from datetime import datetime
 import pytz
@@ -17,6 +18,7 @@ class Sec63Request(BaseModel):
     files: Optional[List[dict]] = []
     risk: Optional[dict] = {}
     dilution: Optional[dict] = {}
+    graph_snapshot_base64: Optional[str] = None
 
 @router.post("/api/report/sec63-pdf")
 def sec63_pdf(req: Sec63Request):
@@ -37,6 +39,15 @@ def sec63_pdf(req: Sec63Request):
     for f in (req.files or []):
         c.drawString(60, y, f"{f.get('name','file')} - {f.get('sha256','')}")
         y -= 12
+    if req.graph_snapshot_base64:
+        try:
+            img_data = base64.b64decode(req.graph_snapshot_base64)
+            img = ImageReader(io.BytesIO(img_data))
+            c.drawImage(img, 50, y-260, width=500, height=250, preserveAspectRatio=True)
+            y -= 270
+        except Exception:
+            c.drawString(50, y, "Graph snapshot could not be embedded")
+            y -= 15
     y -= 10
     c.drawString(50, y, "Risk Assessment:")
     y -= 15
