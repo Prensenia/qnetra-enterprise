@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useFileIngest } from '../../../../hooks/useFileIngest'
-import { fetchWalletHops, fetchWalletRisk, calculateDilution, downloadSec63Dossier } from '../../../../lib/api'
+import { api, fetchWalletHops, fetchWalletRisk, calculateDilution, downloadSec63Dossier, fetchCaseAuditTrail } from '../../../../lib/api'
 import GraphCanvas from '../../../../components/organs/GraphCanvas'
 import RiskInspectorDrawer from '../../../../components/organs/RiskInspectorDrawer'
 import DilutionCalculator from '../../../../components/organs/DilutionCalculator'
@@ -26,13 +26,29 @@ export default function InvestigatePage() {
   const [dilution, setDilution] = useState(null)
   const [showCalc, setShowCalc] = useState(false)
   const { hash, mapped, ingest } = useFileIngest()
+  const activeWallet = selected || caseId
+
+  async function loadHops(walletId = caseId) {
+    try {
+      const d = await fetchWalletHops(walletId)
+      if (d.nodes?.length) {
+        setNodes(d.nodes)
+        setEdges(d.edges || [])
+        return d
+      }
+    } catch (e) {
+      // fall through to the case graph below
+    }
+    // Case IDs are not wallet addresses; hydrate the workspace from the case graph.
+    const graph = await api(`/api/v1/cases/${caseId}/graph`)
+    setNodes(graph.nodes || [])
+    setEdges(graph.edges || [])
+    return graph
+  }
 
   useEffect(() => {
-    fetchWalletHops('0xA7F367e92d11b890').then(d => {
-      setNodes(d.nodes || [])
-      setEdges(d.edges || [])
-    }).catch(() => toast.error('Hops load failed'))
-    fetch(`/api/cases/${caseId}/audit`).then(r => r.json()).then(setAudit).catch(()=>{})
+    loadHops(caseId).catch(() => toast.error('Hops load failed'))
+    fetchCaseAuditTrail(caseId).then(d => setAudit(d.entries || [])).catch(() => {})
   }, [caseId])
 
   useEffect(() => {
@@ -41,22 +57,23 @@ export default function InvestigatePage() {
   }, [selected])
 
   async function runDilution() {
-    const res = await calculateDilution({ initial_taint_ratio: 0.5, hops: [{ wallet_address: '0xA7F367e92d11b890', pre_balance: 1000, received_amount: 500 }] })
+    const res = await calculateDilution({ initial_taint_ratio: 0.5, hops: [{ wallet_address: activeWallet, pre_balance: 1000, received_amount: 500 }] })
     setDilution(res)
   }
 
   async function exportPdf() {
     const cy = graphRef.current?.getCy ? graphRef.current.getCy() : null
     const base64 = graphRef.current?.getSnapshotBase64 ? graphRef.current.getSnapshotBase64() : (cy ? cy.png({ full: true, scale: 1.5 }).split(',')[1] : null)
+    const targetWallet = selected || caseId
     if (isDemoMode) {
-      const { blob, filename } = await downloadSec63Dossier({}, true)
+      const { blob, filename } = await downloadSec63Dossier({ case_id: caseId, target_wallet: targetWallet, graph_snapshot_base64: base64 }, true)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url; a.download = filename; a.click()
       URL.revokeObjectURL(url)
       return
     }
-    const { blob, filename } = await downloadSec63Dossier({ case_id: caseId, target_wallet: '0xA7F367e92d11b890', graph_snapshot_base64: base64 }, false)
+    const { blob, filename } = await downloadSec63Dossier({ case_id: caseId, target_wallet: targetWallet, graph_snapshot_base64: base64 }, false)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url; a.download = filename; a.click()

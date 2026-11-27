@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import QSahayakBot from '../../../components/QSahayakBot'
 import { lookupBank } from '../../../lib/bankHelplines'
 import { t, LANGS } from '../../../lib/translations'
+import { sha256Hex } from '../../../hooks/useFileIngest'
 
 const DEMO_FORM = {
   scam_type: 'Pig-Butchering / Fake Crypto Investment',
@@ -31,6 +32,7 @@ export default function CitizenHelpdesk() {
   const [lang, setLang] = useState('en')
   const [form, setForm] = useState({ scam_type: 'UPI / QR Fraud', incident_time: '', narrative: '', victim_bank: '', victim_upi: '', suspect_upi: '', suspect_wallet: '', exchange: '', amount_inr: '', utrs: [''], time_approx: '' })
   const [files, setFiles] = useState([])
+  const [fileObjects, setFileObjects] = useState([])
   const [messages, setMessages] = useState([])
   const [smsText, setSmsText] = useState('')
   const [ncrpId, setNcrpId] = useState('')
@@ -78,6 +80,7 @@ export default function CitizenHelpdesk() {
     setForm({ scam_type: 'UPI / QR Fraud', incident_time: '', narrative: '', victim_bank: '', victim_upi: '', suspect_upi: '', suspect_wallet: '', exchange: '', amount_inr: '', utrs: [''], time_approx: '' })
     setNcrpId('')
     setFiles([])
+    setFileObjects([])
     setMessages([])
     sessionStorage.removeItem(storageKey)
   }
@@ -142,9 +145,7 @@ export default function CitizenHelpdesk() {
       const res = await api('/api/v1/citizen/cases', { method: 'POST', body: JSON.stringify(payload) })
       // upload evidence files with hash verification
       for (const f of fileObjects) {
-        const buf = await f.arrayBuffer()
-        const hashBuf = await window.crypto.subtle.digest('SHA-256', buf)
-        const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('')
+        const hashHex = await sha256Hex(f)
         const fd = new FormData()
         fd.append('file', f)
         fd.append('client_sha256', hashHex)

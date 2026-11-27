@@ -3,6 +3,12 @@ import Papa from 'papaparse'
 
 const INDIAN_BANKS = ['SBI', 'HDFC', 'ICICI', 'AXIS', 'PNB', 'KOTAK', 'BOB', 'CANARA', 'UNION', 'INDUSIND', 'YES', 'IDFC', 'PAYTM', 'AIRTEL', 'INDIAPOST']
 
+export async function sha256Hex(data) {
+  const buf = data instanceof ArrayBuffer ? data : await data.arrayBuffer()
+  const digest = await window.crypto.subtle.digest('SHA-256', buf)
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 export function useFileIngest() {
   const [hash, setHash] = useState('')
   const [rows, setRows] = useState([])
@@ -50,9 +56,7 @@ export function useFileIngest() {
   }
 
   async function ingest(file) {
-    const buf = await file.arrayBuffer()
-    const hashBuf = await window.crypto.subtle.digest('SHA-256', buf)
-    const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
+    const hashHex = await sha256Hex(file)
     setHash(hashHex)
     const text = await file.text()
     const lines = text.split(/\r?\n/)
