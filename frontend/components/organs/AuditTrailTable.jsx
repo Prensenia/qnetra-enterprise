@@ -18,10 +18,12 @@ export default function AuditTrailTable({ caseId }) {
   const [status, setStatus] = useState('pending') // pending | verified | mismatch | error
   const [loading, setLoading] = useState(false)
   const [offline, setOffline] = useState(false) // backend unreachable: verified against cached hashes
+  const [verifiedAt, setVerifiedAt] = useState('')
 
   function applyEntries(rawEntries) {
     const checked = (rawEntries || []).map(verifyEntry)
     setEntries(checked)
+    setVerifiedAt(new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false }))
     if (checked.length === 0) setStatus('pending')
     else setStatus(checked.every(e => e.verified) ? 'verified' : 'mismatch')
   }
@@ -71,7 +73,7 @@ export default function AuditTrailTable({ caseId }) {
   const verified = status === 'verified'
   const mismatch = status === 'mismatch'
   const badge = verified
-    ? '[✓] CRYPTOGRAPHICALLY VERIFIED'
+    ? '[✓] SHA-256 INTEGRITY VERIFIED'
     : mismatch
       ? '[!] HASH MISMATCH DETECTED'
       : status === 'error'
@@ -105,6 +107,7 @@ export default function AuditTrailTable({ caseId }) {
       </div>
       <div className={`text-[10px] pt-2 border-t border-edge ${badgeClass}`}>
         Total entries: {entries.length} • Integrity: {badge}
+        {verifiedAt && <span className="text-slate-500"> • live re-verification at {verifiedAt} IST</span>}
       </div>
       {offline && (
         <div className="text-[10px] text-amber-400">

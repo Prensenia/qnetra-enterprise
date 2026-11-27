@@ -5,22 +5,22 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Shield, Lock, User } from 'lucide-react'
 
+const DEMO_TOKEN = 'qnetra-demo-session-token'
+
 const DEMO_ACCOUNTS = {
-  'admin@cybernautics.in': { role: 'Lead Investigator', name: 'Admin User', redirect: '/officer/dashboard' },
-  'auditor@cybernautics.in': { role: 'Auditor', name: 'Auditor User', redirect: '/officer/dashboard' },
-  'victim.demo@citizen.in': { role: 'Citizen', name: 'Demo Victim', redirect: '/citizen/helpdesk' },
+  'admin@cybernautics.in': { role: 'officer', displayRole: 'Lead Investigator', name: 'IO Pranshu Joshi', redirect: '/officer/dashboard' },
+  'auditor@cybernautics.in': { role: 'officer', displayRole: 'Auditor', name: 'Compliance Auditor', redirect: '/officer/dashboard' },
+  'victim.demo@citizen.in': { role: 'citizen', displayRole: 'Citizen', name: 'Demo Victim', redirect: '/citizen/helpdesk' },
 }
 
-function base64Url(obj) {
-  return btoa(JSON.stringify(obj)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')
-}
-
-// JWT-shaped demo session token: the backend is unreachable, so it is never
-// validated server-side — it only satisfies the client-side session guards.
-function demoToken(email, role) {
-  const header = base64Url({ alg: 'HS256', typ: 'JWT' })
-  const payload = base64Url({ sub: email, role, demo: true, iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 8 * 60 * 60 })
-  return `${header}.${payload}.demo-signature`
+// The backend is unreachable in demo mode, so the session is never validated
+// server-side; these keys only satisfy the client-side session guards.
+function persistDemoSession(email, demo) {
+  localStorage.setItem('qnetra_token', DEMO_TOKEN)
+  localStorage.setItem('qnetra_user', JSON.stringify({ email, role: demo.role, name: demo.name }))
+  localStorage.setItem('qnetra_role', demo.displayRole)
+  localStorage.setItem('qnetra_user_email', email)
+  localStorage.setItem('qnetra_demo_mode', 'true')
 }
 
 export default function LoginPage() {
@@ -44,19 +44,27 @@ export default function LoginPage() {
   const [regPassword, setRegPassword] = useState('')
 
   function signInDemo(demo, normalizedEmail) {
-    localStorage.setItem('qnetra_token', demoToken(normalizedEmail, demo.role))
-    localStorage.setItem('qnetra_role', demo.role)
-    localStorage.setItem('qnetra_user_email', normalizedEmail)
-    localStorage.setItem('qnetra_user', JSON.stringify({ email: normalizedEmail, name: demo.name, role: demo.role }))
-    localStorage.setItem('qnetra_demo_mode', 'true')
+    persistDemoSession(normalizedEmail, demo)
     toast.success('Signed in (Demo Mode)')
     router.push(demo.redirect)
+  }
+
+  // The backend exposes the login route under /api/v1/auth; try the bare
+  // /api/auth path first (as documented), then the versioned one, and only
+  // fall back to a demo session if the host is unreachable at all.
+  async function attemptLogin(body) {
+    try {
+      return await api('/api/auth/login', { method: 'POST', body })
+    } catch (err) {
+      if (isBackendUnreachable(err)) throw err
+      return api('/api/v1/auth/login', { method: 'POST', body })
+    }
   }
 
   async function login(e) {
     e.preventDefault()
     try {
-      const res = await api('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+      const res = await attemptLogin(JSON.stringify({ email, password }))
       localStorage.setItem('qnetra_token', res.access_token)
       localStorage.setItem('qnetra_role', res.role)
       localStorage.setItem('qnetra_user_email', res.email)

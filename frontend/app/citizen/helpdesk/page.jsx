@@ -6,7 +6,8 @@ import { toast } from 'sonner'
 import QSahayakBot from '../../../components/QSahayakBot'
 import { lookupBank } from '../../../lib/bankHelplines'
 import { t, LANGS } from '../../../lib/translations'
-import { sha256Hex } from '../../../hooks/useFileIngest'
+import { computeSha256Hex } from '../../../hooks/useFileIngest'
+import GoldenHourBanner from '../../../components/GoldenHourBanner'
 
 const DEMO_FORM = {
   scam_type: 'Pig-Butchering / Fake Crypto Investment',
@@ -41,6 +42,8 @@ export default function CitizenHelpdesk() {
   const [stateSel, setStateSel] = useState('')
   const [citySel, setCitySel] = useState('')
   const bankInfo = lookupBank(form.victim_bank)
+  const ncrpValid = /^\d{14}$/.test(ncrpId)
+  const ncrpI4C = ncrpValid && ncrpId.startsWith('3')
 
   // restore
   useEffect(() => {
@@ -145,7 +148,7 @@ export default function CitizenHelpdesk() {
       const res = await api('/api/v1/citizen/cases', { method: 'POST', body: JSON.stringify(payload) })
       // upload evidence files with hash verification
       for (const f of fileObjects) {
-        const hashHex = await sha256Hex(f)
+        const hashHex = await computeSha256Hex(f)
         const fd = new FormData()
         fd.append('file', f)
         fd.append('client_sha256', hashHex)
@@ -179,6 +182,8 @@ export default function CitizenHelpdesk() {
           </div>
         </div>
       )}
+
+      <GoldenHourBanner incidentTime={form.incident_time} />
 
       <div className="p-3 border border-emerald-700 rounded bg-emerald-950 text-emerald-200 text-sm flex items-center justify-between flex-wrap gap-2">
         <div>{t(lang,'emergency')} — {t(lang,'goldenHour')}</div>
@@ -309,7 +314,22 @@ export default function CitizenHelpdesk() {
               {form.utrs[0] === 'UNKNOWN_UTR_BANK_STATEMENT_PENDING' && <div className="text-xs text-emerald-300">No problem—your bank statement or SMS will have this, and officers can still trace using your bank account & timestamp.</div>}
 
               <label className="text-xs text-slate-400">{t(lang,'ncrp')}</label>
-              <input value={ncrpId} onChange={e=>setNcrpId(e.target.value.replace(/\\D/g,'').slice(0,14))} placeholder={t(lang,'ncrp')} pattern="\\d{14}" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+              <input
+                value={ncrpId}
+                onChange={e=>setNcrpId(e.target.value.replace(/\D/g,'').slice(0,14))}
+                placeholder={t(lang,'ncrp')}
+                inputMode="numeric"
+                pattern="\d{14}"
+                aria-invalid={ncrpId.length > 0 && !ncrpValid}
+                aria-describedby="ncrp-help"
+                className={`w-full bg-slate-900 border rounded px-3 py-2 ${ncrpId.length > 0 && !ncrpValid ? 'border-red-500' : ncrpId.length === 0 ? 'border-slate-700' : 'border-emerald-500'}`}
+              />
+              <div id="ncrp-help" className="text-[11px]">
+                {ncrpId.length === 0 && <span className="text-slate-500">14 digits — accepts 12-digit UTRs separately above; NCRP acknowledgement appears on the cybercrime.gov.in receipt.</span>}
+                {ncrpId.length > 0 && !ncrpValid && <span className="text-red-400">NCRP acknowledgement must be exactly 14 digits ({ncrpId.length}/14).</span>}
+                {ncrpValid && ncrpI4C && <span className="text-emerald-300">[✓] I4C XXNCRP acknowledgement recognised (14 digits, I4C series starting with 3).</span>}
+                {ncrpValid && !ncrpI4C && <span className="text-amber-300">[✓] 14-digit NCRP acknowledgement valid (standard series — I4C IDs start with 3).</span>}
+              </div>
 
               <div className="flex gap-2">
                 <button onClick={()=>setStep(1)} className="px-3 py-2 bg-slate-700 text-white rounded">{t(lang,'back')}</button>

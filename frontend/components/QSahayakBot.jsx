@@ -1,8 +1,10 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { Mic, MicOff, Volume2, VolumeX, Bot, Paperclip } from 'lucide-react'
+import { Mic, MicOff, Volume2, VolumeX, Bot, Paperclip, Type } from 'lucide-react'
 import { toast } from 'sonner'
 import { t, LANGS } from '../lib/translations'
+import GoldenHourBanner from './GoldenHourBanner'
+import { A11Y_EVENT, readA11y, toggleA11y } from '../lib/a11y'
 
 function fallbackReply(msg, form, lang, history = []) {
   const m = msg.toLowerCase()
@@ -41,6 +43,13 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode, in
   const [engineMode, setEngineMode] = useState('local-fallback')
   const [debugReason, setDebugReason] = useState('')
   const [files, setFiles] = useState([])
+  const [a11y, setA11y] = useState(false)
+  useEffect(() => {
+    setA11y(readA11y())
+    const onChange = (e) => setA11y(Boolean(e.detail?.on))
+    window.addEventListener(A11Y_EVENT, onChange)
+    return () => window.removeEventListener(A11Y_EVENT, onChange)
+  }, [])
   const recRef = useRef(null)
   const bottomRef = useRef(null)
   useEffect(() => { if (onMessagesChange) onMessagesChange(chat) }, [chat, onMessagesChange])
@@ -132,7 +141,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode, in
   const ringColor = emotion === 'urgent_action' ? 'ring-amber-500' : emotion === 'guiding' ? 'ring-cyan-500' : 'ring-emerald-500'
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col h-full">
+    <div className={`bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col h-full ${a11y ? 'a11y-boost' : ''}`}>
       <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-full bg-slate-900 border-2 ${ringColor} flex items-center justify-center animate-pulse`}>
@@ -144,12 +153,14 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode, in
             <span className={`text-[10px] px-2 py-0.5 rounded border ${engineMode === 'gemini-live' ? 'border-emerald-600 text-emerald-300' : 'border-amber-600 text-amber-300'}`}>{engineMode === 'gemini-live' ? 'AI: Gemini Live' : 'AI: Standalone'}</span>
           </div>
         </div>
+        <GoldenHourBanner compact incidentTime={form.incident_time} />
         <div className="flex gap-2 flex-wrap">
           <select value={lang} onChange={e=>setLang(e.target.value)} className="bg-slate-900 border border-slate-700 rounded text-xs px-2 py-1">
             {LANGS.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
           </select>
           <button onClick={() => setVoiceMode(v => !v)} aria-label="Toggle voice readout" aria-pressed={voiceMode} className="px-2 py-1 text-xs border border-slate-600 rounded">{voiceMode ? <VolumeX size={14}/> : <Volume2 size={14}/>}</button>
           <button onClick={toggleMic} aria-label="Toggle microphone" aria-pressed={listening} className={`px-2 py-1 text-xs border rounded ${listening ? 'bg-red-600 text-white animate-pulse' : 'border-slate-600'}`}>{listening ? <MicOff size={14}/> : <Mic size={14}/>}</button>
+          <button onClick={() => setA11y(toggleA11y(a11y))} aria-label="Accessibility Mode: High-Contrast and Large Text" aria-pressed={a11y} className={`px-2 py-1 text-xs border rounded flex items-center gap-1 ${a11y ? 'bg-amber-300 text-black border-amber-200 font-bold' : 'border-slate-600'}`}><Type size={14}/> A+</button>
           <button onClick={() => fileRef.current?.click()} aria-label="Add file" className="px-2 py-1 text-xs border border-slate-600 rounded flex items-center gap-1"><Paperclip size={14}/> Add File</button>
           <input ref={fileRef} type="file" multiple className="hidden" onChange={handleFiles} />
         </div>

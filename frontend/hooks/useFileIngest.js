@@ -3,10 +3,34 @@ import Papa from 'papaparse'
 
 const INDIAN_BANKS = ['SBI', 'HDFC', 'ICICI', 'AXIS', 'PNB', 'KOTAK', 'BOB', 'CANARA', 'UNION', 'INDUSIND', 'YES', 'IDFC', 'PAYTM', 'AIRTEL', 'INDIAPOST']
 
-export async function sha256Hex(data) {
-  const buf = data instanceof ArrayBuffer ? data : await data.arrayBuffer()
-  const digest = await window.crypto.subtle.digest('SHA-256', buf)
+function digestToHex(digest) {
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Shared SHA-256 helper for every evidence path (File / Blob / ArrayBuffer /
+ * string). Returns a 64-character lowercase hex digest.
+ */
+export async function computeSha256Hex(input) {
+  let buf
+  if (typeof input === 'string') {
+    buf = new TextEncoder().encode(input)
+  } else if (input instanceof ArrayBuffer) {
+    buf = input
+  } else if (ArrayBuffer.isView(input)) {
+    buf = input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength)
+  } else if (input && typeof input.arrayBuffer === 'function') {
+    buf = await input.arrayBuffer()
+  } else {
+    throw new Error('computeSha256Hex: unsupported input')
+  }
+  const digest = await window.crypto.subtle.digest('SHA-256', buf)
+  return digestToHex(digest)
+}
+
+// Backwards-compatible alias for the earlier hook-internal helper.
+export async function sha256Hex(data) {
+  return computeSha256Hex(data)
 }
 
 export function useFileIngest() {

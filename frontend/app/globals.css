@@ -42,3 +42,30 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid #1E293B;
 }
+
+/* Accessibility Mode: High-Contrast & Large Text (115%) — elderly / Divyangjan */
+.a11y-boost {
+  font-size: 115%;
+  color: #ffffff;
+}
+.a11y-boost .text-slate-400,
+.a11y-boost .text-slate-500,
+.a11y-boost .text-slate-600 {
+  color: #e8eefc !important;
+}
+.a11y-boost .border-slate-700,
+.a11y-boost .border-slate-600 {
+  border-color: #94a3b8 !important;
+}
+.a11y-boost input,
+.a11y-boost select,
+.a11y-boost textarea {
+  border-color: #94a3b8 !important;
+  color: #ffffff !important;
+  background-color: #0b1220 !important;
+}
+.a11y-boost button:focus-visible,
+.a11y-boost a:focus-visible {
+  outline: 3px solid #FDE047;
+  outline-offset: 2px;
+}

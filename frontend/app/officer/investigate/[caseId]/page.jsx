@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useFileIngest } from '../../../../hooks/useFileIngest'
-import { api, fetchWalletHops, fetchWalletRisk, calculateDilution, downloadSec63Dossier, fetchCaseAuditTrail } from '../../../../lib/api'
+import { api, fetchWalletHops, fetchWalletRisk, calculateDilution, exportBsaPdf, fetchCaseAuditTrail } from '../../../../lib/api'
 import GraphCanvas from '../../../../components/organs/GraphCanvas'
 import RiskInspectorDrawer from '../../../../components/organs/RiskInspectorDrawer'
 import DilutionCalculator from '../../../../components/organs/DilutionCalculator'
@@ -65,19 +65,19 @@ export default function InvestigatePage() {
     const cy = graphRef.current?.getCy ? graphRef.current.getCy() : null
     const base64 = graphRef.current?.getSnapshotBase64 ? graphRef.current.getSnapshotBase64() : (cy ? cy.png({ full: true, scale: 1.5 }).split(',')[1] : null)
     const targetWallet = selected || caseId
-    if (isDemoMode) {
-      const { blob, filename } = await downloadSec63Dossier({ case_id: caseId, target_wallet: targetWallet, graph_snapshot_base64: base64 }, true)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url; a.download = filename; a.click()
-      URL.revokeObjectURL(url)
-      return
-    }
-    const { blob, filename } = await downloadSec63Dossier({ case_id: caseId, target_wallet: targetWallet, graph_snapshot_base64: base64 }, false)
+    const { blob, filename, mode } = await exportBsaPdf({
+      case_id: caseId,
+      target_wallet: targetWallet,
+      graph_snapshot_base64: base64,
+      risk: { composite_risk: '70/100 (CRITICAL)' },
+      dilution: dilution || undefined,
+      files: mapped.slice(0, 10).map(r => ({ name: r.utr ? `UTR ${r.utr} (${r.bank_name || 'bank'})` : 'evidence', sha256: hash || '' })),
+    })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url; a.download = filename; a.click()
     URL.revokeObjectURL(url)
+    if (mode === 'client') toast.success('Court dossier generated offline (print to PDF)')
   }
 
   function handleFilter(f) {

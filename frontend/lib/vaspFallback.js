@@ -1,0 +1,13 @@
+// Offline copy of the FIU-IND VASP intelligence used by the directory and the
+// Risk Inspector when the FastAPI backend is unreachable (Vercel demo build).
+export const VASP_FALLBACK = [
+  { name: 'CoinDCX (Neblio Technologies Pvt Ltd)', platform: 'CoinDCX', fiu_registered: true, fiu_status: 'FIU-IND Registered Reporting Entity', re_id: 'VA000412', lea_email: 'lea-compliance@coindcx.com', freeze_sla: '< 4 hrs (24x7 nodal desk)', kyc: 'PAN + Aadhaar + Selfie Verified', risk_tier: 'LOW' },
+  { name: 'CoinSwitch (CoinSwitch Kuber)', platform: 'CoinSwitch', fiu_registered: true, fiu_status: 'FIU-IND Registered Reporting Entity', re_id: 'VA000334', lea_email: 'compliance@coinswitch.co', freeze_sla: '< 5 hrs', kyc: 'PAN + Aadhaar + Bank Penny Drop', risk_tier: 'LOW' },
+  { name: 'Mudrex', platform: 'Mudrex', fiu_registered: true, fiu_status: 'FIU-IND Registered Reporting Entity', re_id: 'VA000891', lea_email: 'compliance@mudrex.com', freeze_sla: '< 6 hrs', kyc: 'PAN + Aadhaar', risk_tier: 'MEDIUM' },
+  { name: 'ZebPay', platform: 'ZebPay', fiu_registered: true, fiu_status: 'FIU-IND Registered Reporting Entity', re_id: 'VA000223', lea_email: 'legal@zebpay.com', freeze_sla: '< 5 hrs', kyc: 'PAN + Aadhaar + Video KYC', risk_tier: 'LOW' },
+  { name: 'WazirX (Zanmai Labs)', platform: 'WazirX', fiu_registered: false, fiu_status: 'FIU-IND show-cause issued (Dec 2023) - not a registered reporting entity', re_id: null, lea_email: 'compliance@wazirx.com', freeze_sla: '6-24 hrs (case-by-case)', kyc: 'PAN + Aadhaar (post-breach re-verification)', risk_tier: 'HIGH' },
+  { name: 'Binance Global (Hot Wallet #14)', platform: 'Binance', fiu_registered: false, fiu_status: 'FIU-IND show-cause issued (Dec 2023) - offshore, not registered', re_id: null, lea_email: 'lawenforcement@binance.com', freeze_sla: 'Non-Cooperative / MLAT required', kyc: 'Email only', risk_tier: 'CRITICAL' },
+  { name: 'KuCoin Offshore Settlement', platform: 'KuCoin', fiu_registered: false, fiu_status: 'Offshore unregistered VASP', re_id: null, lea_email: 'lea@kucoin.com', freeze_sla: 'Non-Cooperative', kyc: 'Minimal', risk_tier: 'CRITICAL' },
+  { name: 'Bybit P2P Escrow', platform: 'Bybit', fiu_registered: false, fiu_status: 'Offshore unregistered VASP (P2P desk)', re_id: null, lea_email: 'legal@bybit.com', freeze_sla: 'Non-Cooperative', kyc: 'Phone only', risk_tier: 'HIGH' },
+  { name: 'Telegram P2P (Unregistered)', platform: 'Telegram', fiu_registered: false, fiu_status: 'Unregistered peer-to-peer channel', re_id: null, lea_email: 'N/A', freeze_sla: 'Non-Cooperative', kyc: 'None', risk_tier: 'CRITICAL' },
+]

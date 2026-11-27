@@ -28,10 +28,16 @@ export default function RiskInspectorDrawer({ walletId }) {
         <div className="font-bold text-cyan text-base">{walletId}</div>
         <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-900 text-emerald-300 border border-emerald-700">✓ CONFIRMED ON-CHAIN</span>
       </div>
-      <div className="text-xs text-slate-400">Type: CryptoWallet • Network: TRON TRC-20 • Token: USDT</div>
+      <div className="text-xs text-slate-400">Type: CryptoWallet • Network: {risk.network || 'TRON TRC-20'} • Token: {risk.token || 'USDT'}</div>
       <div className="text-xs text-slate-400">Chain: Ethereum Mainnet • Block #18923451 • Tx: 0xabc...def</div>
-      <div className="text-xs text-slate-400">KYC Status: PAN + Aadhaar Verified • FIU-IND RE-ID: VA000412</div>
-      <div className="text-xs text-slate-400">Nodal Officer: lea-compliance@coindcx.com • Freeze SLA: {'<'} 4 hrs</div>
+      <div className="text-xs text-slate-400">KYC Status: {risk.kyc || 'PAN + Aadhaar Verified'} • FIU-IND RE-ID: {risk.re_id || 'VA000412'}</div>
+      <div className="text-xs text-slate-400">Nodal Officer: {risk.nodal_officer || 'lea-compliance@coindcx.com'} • Freeze SLA: {risk.freeze_sla || '< 4 hrs'}</div>
+      {risk.exchange && (
+        <div className="text-xs text-slate-400">VASP: <span className="text-cyan">{risk.exchange}</span>{risk.risk_tier ? ` • Risk tier: ${risk.risk_tier}` : ''}</div>
+      )}
+      {risk.fiu_status && (
+        <div className={`text-[11px] ${String(risk.fiu_status).toLowerCase().includes('registered') ? 'text-emerald-400' : 'text-amber-400'}`}>{risk.fiu_status}</div>
+      )}
 
       <div className="mt-2">
         <div className="flex justify-between text-xs mb-1">
