@@ -64,7 +64,9 @@ export default function InvestigatePage() {
   async function exportPdf() {
     const cy = graphRef.current?.getCy ? graphRef.current.getCy() : null
     const base64 = graphRef.current?.getSnapshotBase64 ? graphRef.current.getSnapshotBase64() : (cy ? cy.png({ full: true, scale: 1.5 }).split(',')[1] : null)
-    const targetWallet = selected || caseId
+    // Attribute the dossier to the selected node, else the highest-value wallet
+    // in the loaded graph — never to the case id itself.
+    const targetWallet = selected || nodes.find(n => /wallet/i.test(String(n.type || '')))?.id || null
     const { blob, filename, mode } = await exportBsaPdf({
       case_id: caseId,
       target_wallet: targetWallet,
@@ -74,10 +76,19 @@ export default function InvestigatePage() {
       files: mapped.slice(0, 10).map(r => ({ name: r.utr ? `UTR ${r.utr} (${r.bank_name || 'bank'})` : 'evidence', sha256: hash || '' })),
     })
     const url = URL.createObjectURL(blob)
+    if (mode === 'client') {
+      // Open the print-ready certificate so the officer can review and print it.
+      const win = window.open(url, '_blank')
+      if (win) {
+        toast.success('Court dossier opened (print to PDF)')
+        setTimeout(() => URL.revokeObjectURL(url), 60000)
+        return
+      }
+    }
     const a = document.createElement('a')
     a.href = url; a.download = filename; a.click()
     URL.revokeObjectURL(url)
-    if (mode === 'client') toast.success('Court dossier generated offline (print to PDF)')
+    if (mode === 'client') toast.success('Court dossier downloaded (open and print to PDF)')
   }
 
   function handleFilter(f) {

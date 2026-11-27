@@ -1,0 +1,9 @@
+State Bank of India - Statement of Account (Cyber Crime Cell requisition u/s 94 BNSS 2023)
+Account: XX8891 | Period: 01-09-2026 to 08-09-2026 | Generated: 08-09-2026 18:42 IST | Branch: Sector 17, Chandigarh
+utr,amount,timestamp,bank_name,narration,suspect_upi
+420192830192,285000,2026-09-08T10:31:04+05:30,State Bank of India,UPI/DR/420192830192/desk.settlement99@okicici,desk.settlement99@okicici
+420192830193,75000,2026-09-08T10:32:41+05:30,State Bank of India,UPI/DR/420192830193/desk.settlement99@okicici,desk.settlement99@okicici
+420192830194,40000,2026-09-08T10:33:12+05:30,State Bank of India,IMPS/DR/420192830194/PAYTM MULE 81,UPI_MULE_PAYTM81@paytm
+420192830195,35000,2026-09-08T10:34:55+05:30,State Bank of India,IMPS/DR/420192830195/PAYTM MULE 81,UPI_MULE_PAYTM81@paytm
+420192830196,25000,2026-09-08T10:36:02+05:30,State Bank of India,UPI/DR/420192830196/COINDCX NODAL ESCROW,coindcx.nodal@yesbank
+420192830197,10000,2026-09-08T10:37:19+05:30,State Bank of India,UPI/DR/420192830197/COINDCX NODAL ESCROW,coindcx.nodal@yesbank

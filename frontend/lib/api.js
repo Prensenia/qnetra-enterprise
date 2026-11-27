@@ -234,7 +234,7 @@ function buildCourtDossierHtml(payload = {}) {
 <body>
   <h1>Cybernautics Q-Netra — Financial Forensic Dossier</h1>
   <div class="sub">Section 63(4) Bharatiya Sakshya Adhiniyam, 2023 — Electronic Evidence Certificate<br />
-  Case ID: ${escapeHtml(caseId)} &nbsp;|&nbsp; Target wallet: ${escapeHtml(payload.target_wallet || '0xA7F367e92d11b890')} &nbsp;|&nbsp; Generated: ${escapeHtml(now)} IST<br />
+  Case ID: ${escapeHtml(caseId)} &nbsp;|&nbsp; Target wallet: ${escapeHtml(payload.target_wallet || 'not attributed (no node selected)')} &nbsp;|&nbsp; Generated: ${escapeHtml(now)} IST<br />
   <span class="demo">CLIENT-SIDE DEMO DOSSIER — backend reporting service unreachable</span></div>
 
   <h2>Part A — Declaration by the Investigating Officer</h2>
