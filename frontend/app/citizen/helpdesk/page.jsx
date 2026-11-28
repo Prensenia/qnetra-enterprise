@@ -384,6 +384,29 @@ export default function CitizenHelpdesk() {
           )}
           {step === 3 && (
             <div className="space-y-3">
+              {/* Read-only recap of what is about to be filed, so the last step
+                  is a review and not just an upload box. */}
+              <div className="border border-slate-700 rounded p-3 space-y-2 bg-slate-900/60">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  {[
+                    [t(lang,'scamType'), form.scam_type],
+                    [t(lang,'amount'), form.amount_inr ? `₹${Number(form.amount_inr).toLocaleString('en-IN')}` : '—'],
+                    [t(lang,'bank'), form.victim_bank || '—'],
+                    [t(lang,'utr'), (form.utrs || []).filter(Boolean).join(', ') || '—'],
+                    [t(lang,'suspectUpi'), form.suspect_upi || form.suspect_wallet || '—'],
+                    [t(lang,'ncrp'), ncrpId || '—'],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
+                      <div className="text-slate-200 break-words">{value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-slate-500">{t(lang,'narrative')}</div>
+                  <p className="text-xs text-slate-300 leading-snug max-h-24 overflow-auto whitespace-pre-wrap">{form.narrative || '—'}</p>
+                </div>
+              </div>
               <label className="text-xs text-slate-400">{t(lang,'upload')}</label>
               <div
                 onDragOver={e=>{e.preventDefault();setDragOver(true)}}
