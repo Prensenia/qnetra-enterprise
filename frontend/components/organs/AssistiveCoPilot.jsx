@@ -7,7 +7,7 @@ const DISCLAIMER =
 export default function AssistiveCoPilot({ caseId }) {
   const [lang, setLang] = useState('en')
   const summaryEn = 'Funds traced from the victim bank account through mule UPIs, into an FIU-IND reporting VASP nodal account, and finally out to offshore crypto wallets. Recommend an immediate lien on the VASP nodal account and a Section 168 read with Section 94 BNSS notice, limited to the tainted proportion of the balance.'
-  const summaryHi = 'Funds victim bank account se mule UPIs, phir FIU-IND reporting VASP nodal account, aur aakhir mein offshore crypto wallets tak trace hue. VASP nodal account par turant lien aur Section 168 read with Section 94 BNSS notice issue karna recommend hai, sirf tainted proportion tak seemit.'
+  const summaryHi = 'धनराशि पीड़ित के बैंक खाते से म्यूल UPI के ज़रिए FIU-IND को रिपोर्टिंग करने वाले VASP नोडल खाते तक, और अंत में विदेशी क्रिप्टो वॉलेट तक ट्रेस हुई है। VASP नोडल खाते पर तत्काल लियन (lien) लगाने और धारा 168 के साथ धारा 94 BNSS 2023 की नोटिस जारी करने की सिफ़ारिश है — केवल टेम्पर्ड अनुपात तक सीमित।'
 
   const notice = `NOTICE UNDER SECTION 168 READ WITH SECTION 94 OF THE BHARATIYA NAGARIK SURAKSHA SANHITA (BNSS), 2023
 (Immediate bank lien / hold on proceeds of crime)
