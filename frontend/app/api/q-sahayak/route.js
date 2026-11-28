@@ -69,14 +69,16 @@ function extract(message, currentForm = {}) {
 
   const utr = msg.match(/\b\d{12}\b/)
   const ncrp = msg.match(/\b\d{14}\b/)
-  const amount = msg.match(/(?:₹|rs\.?|inr)\s*([\d,]+(?:\.\d{1,2})?)/i) || msg.match(/\b(\d{4,9}(?:,\d{3})+|\d{4,9})\b/)
+  const amount = msg.match(/(?:₹|rs\.?|inr|rupees?|rupaye?)\s*([\d,]+(?:\.\d{1,2})?)/i) || msg.match(/\b(\d{1,3}(?:,\d{2,3})+|\d{4,9})\b/)
   const wallet = msg.match(/\b0x[a-fA-F0-9]{6,40}\b/) || msg.match(/\bT[A-Za-z0-9]{30,40}\b/)
   const upi = msg.match(/[a-zA-Z0-9.\-_]+@[a-zA-Z]{3,}/)
 
   // A message can carry both the bank UTR and the NCRP acknowledgement.
-  if (utr && !currentForm.utr) out.utr = utr[0]
+  // What the citizen states now overrides prefilled demo data: the form must
+  // never contradict the sentence they just typed on stage.
+  if (utr) out.utr = utr[0]
   if (ncrp) out.ncrp_id = ncrp[0]
-  if (!currentForm.amount_inr) {
+  {
     let value = null
     if (amount) {
       const raw = String(amount[1])

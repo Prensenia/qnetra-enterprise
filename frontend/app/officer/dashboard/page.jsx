@@ -58,6 +58,10 @@ export default function OfficerDashboard() {
   }
 
   if (!summary) return <div className="p-6">Loading...</div>
+  // Keep the fiat KPI equal to the queue it sits above, so the top card and the
+  // risk-tier footer can never show two different totals on stage.
+  const queueFiat = (summary.bridge_queue || []).reduce((n, q) => n + (Number(q.total_inr) || 0), 0)
+  const tracedFiat = queueFiat || summary.total_traced_inr
   const filtered = (summary.bridge_queue||[]).filter(q => q.case_id.toLowerCase().includes(search.toLowerCase()) || q.title.toLowerCase().includes(search.toLowerCase()))
 
   return (
@@ -74,7 +78,7 @@ Offline demo mode — seeded case data. Start the FastAPI + Neo4j stack (docker 
       <Narrator screen="dashboard" />
       <div className="grid grid-cols-4 gap-4">
         <Kpi label="Active Investigations" value={summary.active_investigations} />
-        <Kpi label="Traced Fiat (INR)" value={`₹${(summary.total_traced_inr/10000000).toFixed(2)} Cr`} />
+        <Kpi label="Traced Fiat (INR)" value={`₹${(tracedFiat/10000000).toFixed(2)} Cr`} />
         <Kpi label="Traced Crypto (USDT)" value={`$${summary.total_traced_usdt.toLocaleString()}`} />
         <Kpi label="Mule & VASP Clusters" value={summary.flagged_mule_clusters} />
       </div>
