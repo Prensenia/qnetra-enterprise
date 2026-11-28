@@ -219,10 +219,10 @@ export default function CitizenHelpdesk() {
     <div className="space-y-4">
       {isDemo && (
         <div className="p-3 border border-emerald-700 rounded bg-emerald-950 text-emerald-200 text-sm flex items-center justify-between flex-wrap gap-2">
-          <span>Judge Pitch Demo Mode Active</span>
+          <span>{t(lang,'demoBadge')}</span>
           <div className="flex gap-2">
-            <button onClick={loadDemo} className="px-3 py-1 bg-emerald-600 text-white rounded text-xs">Re-Load Demo Details</button>
-            <button onClick={resetForm} className="px-3 py-1 bg-slate-700 text-white rounded text-xs">Clear Form (Test Live Entry)</button>
+            <button onClick={loadDemo} className="px-3 py-1 bg-emerald-600 text-white rounded text-xs">{t(lang,'demoReload')}</button>
+            <button onClick={resetForm} className="px-3 py-1 bg-slate-700 text-white rounded text-xs">{t(lang,'demoClear')}</button>
           </div>
         </div>
       )}
@@ -428,12 +428,12 @@ export default function CitizenHelpdesk() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {[
-          ['1', 'Freeze request, not a FIR', 'Your report opens a case and a bank freeze request inside the golden hour. It is a complaint, not an accusation.'],
-          ['2', 'Officer triages in minutes', 'The case appears in the officer queue pre-triaged by Q-Sahayak, with the UTR and bank already extracted.'],
-          ['3', 'You can track it', 'My Cases shows the status and every action taken on your evidence, hash-verified under Section 63 BSA 2023.'],
+          ['1', t(lang,'stepCard1Title'), t(lang,'stepCard1Body')],
+          ['2', t(lang,'stepCard2Title'), t(lang,'stepCard2Body')],
+          ['3', t(lang,'stepCard3Title'), t(lang,'stepCard3Body')],
         ].map(([n, title, body]) => (
           <div key={n} className="p-3 rounded-xl border border-slate-700 bg-slate-800">
-            <div className="text-emerald-400 text-xs font-bold mb-1">STEP {n}</div>
+            <div className="text-emerald-400 text-xs font-bold mb-1">{t(lang,'stepTag')} {n}</div>
             <div className="text-sm font-semibold text-slate-100">{title}</div>
             <div className="text-xs text-slate-400 mt-1 leading-relaxed">{body}</div>
           </div>
@@ -441,9 +441,9 @@ export default function CitizenHelpdesk() {
       </div>
       {bankInfo && (
         <div className="p-3 border border-emerald-600 rounded bg-emerald-900 text-xs text-emerald-100">
-          <div className="font-bold mb-1">Emergency Bank Freeze Card</div>
-          <div>National Cyber Helpline: <a href="tel:1930" className="underline">1930</a></div>
-          <div>{bankInfo.name} 24x7 Fraud Desk: {bankInfo.numbers.map(n => <a key={n} href={`tel:${n}`} className="underline mr-2">{n}</a>)}</div>
+          <div className="font-bold mb-1">{t(lang,'freezeCard')}</div>
+          <div>{t(lang,'nationalHelpline')} <a href="tel:1930" className="underline">1930</a></div>
+          <div>{bankInfo.name} {t(lang,'fraudDesk')} {bankInfo.numbers.map(n => <a key={n} href={`tel:${n}`} className="underline mr-2">{n}</a>)}</div>
         </div>
       )}
     </div>
