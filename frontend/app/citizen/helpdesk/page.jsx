@@ -1,11 +1,12 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createCitizenCase } from '../../../lib/api'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import QSahayakBot from '../../../components/QSahayakBot'
 import { lookupBank } from '../../../lib/bankHelplines'
 import { t, LANGS } from '../../../lib/translations'
+import { Globe } from 'lucide-react'
 import { computeSha256Hex } from '../../../hooks/useFileIngest'
 import GoldenHourBanner from '../../../components/GoldenHourBanner'
 import Narrator from '../../../components/Narrator'
@@ -48,6 +49,21 @@ export default function CitizenHelpdesk() {
 
   const [step, setStep] = useState(1)
   const [lang, setLang] = useState('en')
+
+  // Language survives a reload and carries across tabs, so the picker never
+  // snaps back to English mid-demo.
+  const langReady = useRef(false)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('qnetra_lang')
+      if (saved && LANGS.some(l => l.code === saved)) setLang(saved)
+    } catch {}
+    langReady.current = true
+  }, [])
+  useEffect(() => {
+    if (!langReady.current) return
+    try { localStorage.setItem('qnetra_lang', lang) } catch {}
+  }, [lang])
   const [form, setForm] = useState({ scam_type: 'UPI / QR Fraud', incident_time: '', narrative: '', victim_bank: '', victim_upi: '', suspect_upi: '', suspect_wallet: '', exchange: '', amount_inr: '', utrs: [''], time_approx: '' })
   const [files, setFiles] = useState([])
   const [fileObjects, setFileObjects] = useState([])
@@ -231,10 +247,22 @@ export default function CitizenHelpdesk() {
 
       <div className="p-3 border border-emerald-700 rounded bg-emerald-950 text-emerald-200 text-sm flex items-center justify-between flex-wrap gap-2">
         <div>{t(lang,'emergency')} — {t(lang,'goldenHour')}</div>
-        <div className="flex gap-2">
-          <select value={lang} onChange={e=>setLang(e.target.value)} className="bg-slate-900 border border-slate-700 rounded text-xs px-2 py-1">
-            {LANGS.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
-          </select>
+        <div className="flex gap-2 items-center flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap" role="group" aria-label="Language">
+            <Globe size={13} className="text-emerald-300 mr-0.5" aria-hidden="true" />
+            {LANGS.map(l => (
+              <button
+                key={l.code}
+                type="button"
+                onClick={() => setLang(l.code)}
+                aria-pressed={lang === l.code}
+                title={`${l.label} (${l.code})`}
+                className={`px-2 py-1 rounded border text-xs transition-colors ${lang === l.code ? 'bg-emerald-600 border-emerald-400 text-white font-bold' : 'bg-slate-900 border-slate-600 text-slate-300 hover:border-emerald-500'}`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
           <a href="tel:1930" className="px-3 py-1 bg-red-600 text-white rounded text-xs">Call 1930</a>
         </div>
       </div>
