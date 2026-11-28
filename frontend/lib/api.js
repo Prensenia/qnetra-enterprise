@@ -307,7 +307,9 @@ export function listDemoCases() {
 }
 
 function nextDemoCaseId() {
-  return `CP-CYBER-2026-${String(101 + listDemoCases().length).padStart(3, '0')}`
+  // Same prefix the officer queue uses, so the acknowledgement receipt and the
+  // officer view name one case instead of looking like two separate ones.
+  return `CYB-2026-${String(101 + listDemoCases().length).padStart(3, '0')}`
 }
 
 export function saveDemoCase(payload = {}, files = []) {

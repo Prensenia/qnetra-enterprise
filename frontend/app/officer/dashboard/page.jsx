@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { api, isBackendUnreachable } from '../../../lib/api'
+import { api, isBackendUnreachable, listDemoCases } from '../../../lib/api'
 import { useRouter } from 'next/navigation'
 import AuditTrailTable from '../../../components/organs/AuditTrailTable'
 import Narrator from '../../../components/Narrator'
@@ -34,8 +34,24 @@ export default function OfficerDashboard() {
       setCitizenCount(c.length)
       setOffline(false)
     } catch {
-      setSummary(DEMO_SUMMARY)
-      setCitizenCount(1)
+      // Show the complaint the citizen actually filed, under its own case id, so
+      // the receipt and this queue never name the same submission differently.
+      const local = listDemoCases()
+      const base = DEMO_SUMMARY.bridge_queue.filter(q => q.status !== 'NEW_CITIZEN_REPORT')
+      const submitted = local.slice(0, 3).map(c => {
+        const bank = String(c.victim_bank || 'UPI').replace(/ Bank$/, '')
+        const exchange = String(c.exchange || 'Bank').split(' (')[0]
+        const lakhs = ((Number(c.amount_inr) || 0) / 100000).toFixed(2)
+        return {
+          case_id: c.case_id,
+          title: `${bank} → ${exchange} ₹${lakhs}L Citizen Packet`,
+          risk_tier: (Number(c.amount_inr) || 0) >= 200000 ? 'HIGH' : 'MEDIUM',
+          status: 'NEW_CITIZEN_REPORT',
+          total_inr: Number(c.amount_inr) || 0,
+        }
+      })
+      setSummary({ ...DEMO_SUMMARY, bridge_queue: submitted.length ? [...base, ...submitted] : DEMO_SUMMARY.bridge_queue })
+      setCitizenCount(local.length || 1)
       setOffline(true)
     }
   }
