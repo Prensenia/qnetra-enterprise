@@ -26,6 +26,12 @@ export default function OfficerDashboard() {
   const [search, setSearch] = useState('')
   const [citizenCount, setCitizenCount] = useState(0)
   const [offline, setOffline] = useState(false)
+  const [role, setRole] = useState(null)
+
+  // Same source the Dispatch screen reads, so both screens agree on who is signed in.
+  useEffect(() => {
+    try { setRole(localStorage.getItem('qnetra_role')) } catch {}
+  }, [])
 
   async function load() {
     try {
@@ -74,6 +80,8 @@ export default function OfficerDashboard() {
   }
 
   if (!summary) return <div className="p-6">Loading...</div>
+  // The demo login stores "Compliance Auditor"; the API login stores "Auditor".
+  const isAuditor = /auditor/i.test(role || '')
   // Keep the fiat KPI equal to the queue it sits above, so the top card and the
   // risk-tier footer can never show two different totals on stage.
   const queueFiat = (summary.bridge_queue || []).reduce((n, q) => n + (Number(q.total_inr) || 0), 0)
@@ -87,9 +95,14 @@ export default function OfficerDashboard() {
 Offline demo mode — seeded case data. Start the FastAPI + Neo4j stack (docker compose up) for live ingestion, scoring and PDF generation; every screen below works either way.
         </div>
       )}
+      {isAuditor && (
+        <div className="px-3 py-2 border border-amber-600 rounded text-amber-300 text-sm">
+          Read-Only Compliance Auditor Mode — hash verification and case review stay open; ingestion and dispatch are disabled.
+        </div>
+      )}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-cyan">Officer Command Dashboard</h1>
-        <button onClick={webhook} className="px-3 py-2 bg-panel border border-edge rounded flex items-center gap-2"><Play size={14} /> Simulate Live Webhook</button>
+        <button onClick={webhook} disabled={isAuditor} title={isAuditor ? 'Disabled in read-only auditor mode' : undefined} className="px-3 py-2 bg-panel border border-edge rounded flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"><Play size={14} /> Simulate Live Webhook</button>
       </div>
       <Narrator screen="dashboard" />
       <div className="grid grid-cols-4 gap-4">
