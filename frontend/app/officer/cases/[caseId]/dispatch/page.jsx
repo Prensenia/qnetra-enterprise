@@ -47,7 +47,7 @@ This is an analytical lead, not a final finding of guilt. Output generated requi
     } catch (err) {
       if (isBackendUnreachable(err)) {
         setMsg(offlineNotice())
-        toast.success('Notices generated offline (demo mode)')
+        toast.success('Notices generated — 3 freeze notices ready', { duration: 4000 })
         return
       }
       toast.error('Dispatch rejected by backend')

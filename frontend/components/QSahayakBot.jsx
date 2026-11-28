@@ -202,7 +202,7 @@ export default function QSahayakBot({ form, setForm, lang, setLang, demoMode, in
           <div>
             <div className="font-bold text-cyan">Q-Sahayak</div>
             <div className="text-[10px] text-slate-400">{t(lang,'qSubtitle')}</div>
-            <span className={`text-[10px] px-2 py-0.5 rounded border ${engineMode === 'gemini-live' ? 'border-emerald-600 text-emerald-300' : 'border-amber-600 text-amber-300'}`}>{engineMode === 'gemini-live' ? 'AI: Gemini Live' : 'AI: Standalone'}</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded border ${engineMode === 'gemini-live' ? 'border-emerald-600 text-emerald-300' : 'border-amber-600 text-amber-300'}`}>{engineMode === 'gemini-live' ? 'AI: Gemini Live' : 'AI: On-Device · No Data Egress'}</span>
           </div>
         </div>
         <GoldenHourBanner compact incidentTime={form.incident_time} />

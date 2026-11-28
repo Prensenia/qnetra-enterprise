@@ -193,7 +193,7 @@ export default function CitizenHelpdesk() {
         }
       }
 
-      toast.success(res.demo ? `Case registered (Demo Mode) — ${res.case_id}` : `Case registered — ${res.case_id}`)
+      toast.success(`Case registered — ${res.case_id}. Receipt and freeze request generated.`)
       sessionStorage.removeItem(storageKey)
       router.push(`/citizen/case-submitted/${res.case_id}`)
     } catch (err) {

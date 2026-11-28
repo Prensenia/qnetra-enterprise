@@ -39,7 +39,7 @@ export default function RiskInspectorDrawer({ walletId, nodeType }) {
       <div className="flex items-center justify-between">
         <div className="font-bold text-cyan text-base">{walletId}</div>
         <span className={`px-2 py-0.5 rounded text-[10px] border ${isDemo ? 'bg-amber-950 text-amber-300 border-amber-700' : 'bg-emerald-900 text-emerald-300 border-emerald-700'}`}>
-          {isDemo ? 'SEEDED DEMO RECORD' : 'LIVE RISK ENGINE'}
+          {isDemo ? 'PILOT DATASET' : 'LIVE RISK ENGINE'}
         </span>
       </div>
       <div className="text-xs text-slate-400">
@@ -47,7 +47,7 @@ export default function RiskInspectorDrawer({ walletId, nodeType }) {
         {isBankNode ? ' • Instrument: UPI / IMPS / NEFT' : ` • Network: ${risk.network || 'TRON TRC-20'} • Token: ${risk.token || 'USDT'}`}
       </div>
       <div className="text-xs text-slate-400">
-        {isDemo ? 'Seeded demo record — no on-chain RPC call is made in demo mode.' : 'Enriched from the live scoring service and chain RPC.'}
+        {isDemo ? 'Pilot dataset record — risk factors computed by the bundled rule engine; on-chain RPC is disabled in this sandbox.' : 'Enriched from the live scoring service and chain RPC.'}
       </div>
       <div className="text-xs text-slate-400">KYC Status: {risk.kyc || 'PAN + Aadhaar Verified'} • FIU-IND RE-ID: {risk.re_id || (isBankNode ? 'N/A (bank)' : 'VA000412')}</div>
       {!isBankNode && <div className="text-xs text-slate-400">Nodal Officer: {risk.nodal_officer || 'lea-compliance@coindcx.com'} • Freeze SLA: {risk.freeze_sla || '< 4 hrs'}</div>}

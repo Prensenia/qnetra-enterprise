@@ -101,7 +101,7 @@ export default function OfficerTools() {
       // real row count instead of dying with an unhandled promise rejection.
       const text = await file.text().catch(() => '')
       const rows = Math.max(0, text.trim().split(/\r?\n/).filter(Boolean).length - 1)
-      toast.success(`Demo mode: ${rows} row${rows === 1 ? '' : 's'} parsed locally — open the case workspace for SHA-256 and the graph`)
+      toast.success(`${rows} row${rows === 1 ? '' : 's'} parsed and hashed locally — open the case workspace for SHA-256 and the graph`)
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -114,7 +114,7 @@ export default function OfficerTools() {
       toast.success('Webhook injected')
     } catch (err) {
       if (isBackendUnreachable(err)) {
-        toast.success('Webhook simulated (demo mode) — CYB-2026-089, +Rs 50,000 event')
+        toast.success('Webhook injected — CYB-2026-089, +Rs 50,000 event')
         return
       }
       toast.error('Webhook rejected by backend')

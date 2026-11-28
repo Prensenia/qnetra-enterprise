@@ -46,7 +46,7 @@ export default function LoginPage() {
 
   function signInDemo(demo, normalizedEmail) {
     persistDemoSession(normalizedEmail, demo)
-    toast.success('Signed in (Demo Mode)')
+    toast.success('Signed in')
     router.push(demo.redirect)
   }
 

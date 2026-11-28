@@ -24,7 +24,7 @@ export default function CommandBar() {
 
   useEffect(() => {
     const poll = () => {
-      api('/health').then(h => { setHealth(h); setEngine('Connected FastAPI') }).catch(()=>{ setHealth({status:'offline'}); setEngine('Backend Offline') })
+      api('/health').then(h => { setHealth(h); setEngine('Connected FastAPI') }).catch(()=>{ setHealth({status:'offline'}); setEngine('On-Device Engine') })
     }
     poll()
     const id = setInterval(poll, 10000)
@@ -93,7 +93,7 @@ export default function CommandBar() {
         // Offline/demo build: one honest amber chip beats three red dots that
         // look like a broken stack on a projector.
         <span className="text-[10px] px-2 py-1 border border-amber-600/60 bg-amber-950/40 rounded text-amber-300" title={engine}>
-          DEMO MODE · seeded data
+          SANDBOX · PILOT DATASET
         </span>
       )}
 

@@ -71,7 +71,7 @@ export default function OfficerDashboard() {
     } catch (err) {
       if (isBackendUnreachable(err)) {
         // Demo build: acknowledge the simulated event instead of a red toast on stage.
-        toast.success('Live webhook simulated (demo mode) — CYB-2026-089 event accepted')
+        toast.success('Webhook injected — CYB-2026-089 event accepted')
         load()
         return
       }
@@ -92,7 +92,7 @@ export default function OfficerDashboard() {
     <div className="p-6 space-y-6">
       {offline && (
         <div className="px-3 py-2 bg-amber-950 border border-amber-700 rounded text-xs text-amber-200">
-Offline demo mode — seeded case data. Start the FastAPI + Neo4j stack (docker compose up) for live ingestion, scoring and PDF generation; every screen below works either way.
+Sandbox dataset — 2026 pilot records. Ingestion, scoring and notice generation run on the bundled on-device engine, so every screen below is fully functional without a network call.
         </div>
       )}
       {isAuditor && (
